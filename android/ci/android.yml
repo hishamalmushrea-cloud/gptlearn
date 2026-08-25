@@ -11,9 +11,13 @@ on:
       - 'index.html'
       - '.github/workflows/android.yml'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +26,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Set up Android SDK (تثبيت/ترخيص إن لزم)
+        uses: android-actions/setup-android@v3
 
       - name: Install Gradle manually (bypass broken Actions cache service)
         run: |
@@ -43,3 +50,16 @@ jobs:
           name: souq-allughah-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Publish APK as GitHub Release (تحميل مباشر)
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK=$(ls android/app/build/outputs/apk/debug/*.apk)
+          TAG="apk-v${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" "$APK#تطبيق سوق اللغة — ثبّته مباشرة" \
+            --title "سوق اللغة — APK (بناء #$GITHUB_RUN_NUMBER)" \
+            --target "$GITHUB_SHA" \
+            --notes "أكاديمية الإندونيسية والتركية كاملة (1000 جملة، 33 موقفًا، 50 فصلًا) — أوفلاين 100% وبلا أي صلاحية إنترنت. فعّل «مصادر غير معروفة» وثبّت." \
+            2>/dev/null || gh release upload "$TAG" "$APK" --clobber

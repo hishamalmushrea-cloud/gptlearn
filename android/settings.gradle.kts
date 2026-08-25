@@ -1,6 +1,7 @@
 pluginManagement {
     repositories {
         google()
+        gradlePluginPortal()   // ضروري لحل ملحق Kotlin
         mavenCentral()
     }
 }
