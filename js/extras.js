@@ -166,14 +166,15 @@
 
   /* ============ ✍️ تمرين الكتابة (R4) ============ */
   let wr = null;
-  App.Views.write = function () {
-    if (!wr || wr.done) {
+  App.Views.write = function (modeArg) {
+    if (!wr || wr.done || (modeArg && modeArg !== wr.mode)) {
       const pool = App.bankSorted().filter(p => (p.i || "").split(" ").length >= 3).sort(() => Math.random() - .5).slice(0, 10);
-      wr = { pool, idx: 0, mode: "order", score: 0, done: false };
+      wr = { pool, idx: 0, mode: modeArg || "order", score: 0, done: false };
     }
     renderWrite();
   };
   function renderWrite() {
+    if (wr.mode === "type") { renderWriteType(); return; }
     if (wr.idx >= wr.pool.length) {
       App.track("writing", wr.score);
       wr.done = true;
@@ -190,6 +191,10 @@
     const words = p.i.split(/\s+/).filter(Boolean).sort(() => Math.random() - .5);
     $("#view").innerHTML = `
     <div class="crumbs"><a href="#/cards">🃏 التدريب</a> ‹ ✍️ تمرين الكتابة</div>
+    <div class="chips">
+      <a class="chip ${wr.mode === "order" ? "on" : ""}" href="#/write/order">🧩 رتب الجملة</a>
+      <a class="chip ${wr.mode === "type" ? "on" : ""}" href="#/write/type">⌨️ اكتبها من الذاكرة</a>
+    </div>
     <div class="box">
       <div class="tr-progress">${wr.pool.map((_, k) => `<i class="${k < wr.idx ? "done" : k === wr.idx ? "now" : ""}"></i>`).join("")}</div>
       <div class="tr-prompt" style="text-align:center;font-size:1.15rem;font-weight:800">${esc(p.a)}</div>
@@ -229,6 +234,164 @@
         <div style="text-align:center;margin-top:8px"><button class="btn primary sm" id="wrNext">${wr.idx + 1 < wr.pool.length ? "التالي ←" : "إنهاء 🏁"}</button></div>`;
       document.getElementById("wrNext").addEventListener("click", () => { wr.idx++; renderWrite(); });
     });
+  }
+
+  /* ⌨️ كتابة حرة من الذاكرة بتصحيح ضبابي صادق */
+  function renderWriteType() {
+    if (wr.idx >= wr.pool.length) {
+      App.track("writing", wr.score);
+      wr.done = true;
+      App.$("#view").innerHTML = `
+      <div class="box" style="text-align:center;padding:30px">
+        <div style="font-size:2.6rem">⌨️</div>
+        <h3>أنهيت جلسة الكتابة الحرة: ${wr.score}/${wr.pool.length}</h3>
+        <div class="callout tip">${wr.score >= 8 ? "إملاؤك ممتاز — انتقل لبطاقات 250" : "الإملاء يُبنى بالتكرار: كرر غدًا نفس الجلسة"}</div>
+        <div style="margin-top:10px"><a class="btn primary sm" href="#/write/type">🔁 جلسة جديدة</a></div>
+      </div>`;
+      return;
+    }
+    const p = wr.pool[wr.idx];
+    App.$("#view").innerHTML = `
+    <div class="crumbs"><a href="#/cards">🃏 التدريب</a> ‹ ⌨️ كتابة من الذاكرة</div>
+    <div class="chips">
+      <a class="chip" href="#/write/order">🧩 رتب الجملة</a>
+      <a class="chip on" href="#/write/type">⌨️ اكتبها من الذاكرة</a>
+    </div>
+    <div class="box">
+      <div class="tr-progress">${wr.pool.map((_, k) => `<i class="${k < wr.idx ? "done" : k === wr.idx ? "now" : ""}"></i>`).join("")}</div>
+      <div class="tr-prompt" style="text-align:center;font-size:1.15rem;font-weight:800">${App.esc(p.a)}</div>
+      <p class="mini-note" style="text-align:center">اكتبها بالإندونيسية كما تتذكرها (التصحيح يتسامح مع علامات الترقيم):</p>
+      <div class="tr-input" style="justify-content:center">
+        <input id="wrTypeIn" type="text" dir="ltr" placeholder="Tulis di sini…" autocomplete="off">
+        <button class="btn primary" id="wrTypeGo">تحقق ✓</button>
+      </div>
+      <div id="wrTypeFb"></div>
+    </div>`;
+    const inp = document.getElementById("wrTypeIn"); inp.focus();
+    const check = () => {
+      const val = (inp.value || "").trim();
+      if (!val) { App.toast("اكتب جوابك أولًا ✍️"); return; }
+      const g = App.Trainer.grade(val, { accept: [{ i: p.i }], keysId: p.i.split(" ").filter(w => w.length > 3).slice(0, 4) }, "id");
+      const ok = g >= 2;
+      if (g === 3) { wr.score++; App.langTrack("id", p.id); }
+      else if (!ok) App.addMistake({ q: "اكتب: " + p.a, correct: p.i, lang: "id", source: "⌨️ كتابة حرة", why: p.n || "" });
+      App.track("writing", 1);
+      document.getElementById("wrTypeFb").innerHTML = `
+        <div class="feedback f${g}"><b class="t">${g === 3 ? "🎉 مطابقة تامة!" : g === 2 ? "👍 قريب جدًا — مع أخطاء صغيرة" : g === 1 ? "🛠️ نصف الطريق — قارن" : "❌ النموذج الصحيح:"}</b>
+        <div class="ltext">${App.esc(p.i)}</div>
+        <div class="ltrans">نطقك: ${App.esc(val)}</div>
+        ${p.it ? `<div class="ltrans">النطق الصحيح: ${App.esc(p.it)}</div>` : ""}</div>
+        <div style="text-align:center;margin-top:8px"><button class="btn primary sm" id="wrTypeNext">${wr.idx + 1 < wr.pool.length ? "التالي ←" : "إنهاء 🏁"}</button></div>`;
+      document.getElementById("wrTypeNext").addEventListener("click", () => { wr.idx++; renderWriteType(); });
+    };
+    document.getElementById("wrTypeGo").addEventListener("click", check);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+  }
+
+  /* ============ 🎧 تمارين الاستماع ============ */
+  let ls = null;
+  App.Views.listen = function (tab) {
+    if (tab === "type") { App.Views.listenType(); return; }
+    if (!ls || ls.done) {
+      const pool = App.bankSorted().slice(0, 300).sort(() => Math.random() - .5).slice(0, 10);
+      ls = { pool, idx: 0, mode: "choose", score: 0, done: false };
+    }
+    renderListen();
+  };
+  function renderListen() {
+    if (ls.idx >= ls.pool.length) {
+      App.track("listening", ls.score); ls.done = true;
+      App.$("#view").innerHTML = `
+      <div class="box" style="text-align:center;padding:30px">
+        <div style="font-size:2.6rem">🎧</div>
+        <h3>أنهيت جلسة الاستماع: ${ls.score}/${ls.pool.length}</h3>
+        <div class="callout tip">إن لم تسمع الصوت: صوت ${"اللغة"} غير مثبت على جهازك — استخدم «اسمع واكتب» بالنطق المكتوب أسفل كل جواب، أو ثبّت حزمة أصوات اللغة في إعدادات جهازك.</div>
+        <div style="margin-top:10px"><a class="btn primary sm" href="#/listen">🔁 جلسة جديدة</a></div>
+      </div>`;
+      return;
+    }
+    const p = ls.pool[ls.idx];
+    const others = App.allPhrases().filter(x => x.id !== p.id).sort(() => Math.random() - .5).slice(0, 3);
+    const opts = [p, ...others].sort(() => Math.random() - .5);
+    App.$("#view").innerHTML = `
+    <div class="crumbs"><a href="#/cards">🃏 التدريب</a> ‹ 🎧 تمرين الاستماع</div>
+    <div class="chips">
+      <button class="chip on">اسمع واختر المعنى</button>
+      <a class="chip" href="#/listen/type">⌨️ اسمع واكتب</a>
+    </div>
+    <div class="box">
+      <div class="tr-progress">${ls.pool.map((_, k) => `<i class="${k < ls.idx ? "done" : k === ls.idx ? "now" : ""}"></i>`).join("")}</div>
+      <div style="text-align:center;margin:12px 0">
+        <button class="icon-btn" style="width:56px;height:56px;font-size:1.6rem" data-act="speak" data-code="id-ID" data-text="${App.esc(p.i)}">🔊</button>
+        <button class="icon-btn" style="width:44px;height:44px;font-size:1.1rem" data-act="speak" data-code="id-ID" data-text="${App.esc(p.i)}" data-rate="0.65" title="بطيء">🐢</button>
+      </div>
+      <p class="mini-note" style="text-align:center">اضغط 🔊 واسمع، ثم اختر المعنى العربي الصحيح (أعد التشغيل بلا حدود)</p>
+      <div id="lsOpts">${opts.map(o => `<button class="quiz-opt" data-ok="${o.id === p.id ? 1 : 0}" data-ar="${App.esc(o.a)}">${App.esc(o.a)}</button>`).join("")}</div>
+      <div id="lsFb"></div>
+    </div>`;
+    document.getElementById("lsOpts").addEventListener("click", e => {
+      const b = e.target.closest(".quiz-opt"); if (!b || b.disabled) return;
+      const ok = b.dataset.ok === "1";
+      App.track("listening", 1);
+      if (ok) { ls.score++; App.langTrack("id", p.id); }
+      else App.addMistake({ q: "🎧 سمعتَ: " + p.i, correct: p.a, lang: "id", source: "🎧 استماع", why: "أعد الاستماع بالسرعة البطيئة 🐢" });
+      document.querySelectorAll("#lsOpts .quiz-opt").forEach(x => {
+        if (x.dataset.ok === "1") x.classList.add("right"); else if (x === b) x.classList.add("wrong");
+        x.disabled = true;
+      });
+      document.getElementById("lsFb").innerHTML = `
+        <div class="feedback ${ok ? "f3" : "f1"}"><b class="t">${ok ? "🎉 سمعك حاد!" : "❌ الصوت كان يعني:"}</b>
+        <div class="ltext">${App.esc(p.i)}</div><div class="ltrans">النطق: ${App.esc(p.it || "")}</div></div>
+        <div style="text-align:center;margin-top:8px"><button class="btn primary sm" id="lsNext">${ls.idx + 1 < ls.pool.length ? "التالي ←" : "إنهاء 🏁"}</button></div>`;
+      document.getElementById("lsNext").addEventListener("click", () => { ls.idx++; renderListen(); });
+    });
+  }
+  /* ⌨️ اسمع واكتب */
+  let lst = null;
+  App.Views.listenType = function () {
+    if (!lst || lst.done) {
+      const pool = App.bankSorted().filter(p => (p.i || "").split(" ").length >= 2).sort(() => Math.random() - .5).slice(0, 8);
+      lst = { pool, idx: 0, score: 0, done: false };
+    }
+    if (lst.idx >= lst.pool.length) {
+      App.track("listening", lst.score); lst.done = true;
+      App.$("#view").innerHTML = `<div class="box" style="text-align:center;padding:30px"><div style="font-size:2.6rem">🎧⌨️</div><h3>أنهيت «اسمع واكتب»: ${lst.score}/${lst.pool.length}</h3><div style="margin-top:10px"><a class="btn primary sm" href="#/listen/type">🔁 جلسة جديدة</a> <a class="btn ghost sm" href="#/listen">🎧 اسمع واختر</a></div></div>`;
+      return;
+    }
+    const p = lst.pool[lst.idx];
+    App.$("#view").innerHTML = `
+    <div class="crumbs"><a href="#/listen">🎧 الاستماع</a> ‹ ⌨️ اسمع واكتب</div>
+    <div class="box">
+      <div class="tr-progress">${lst.pool.map((_, k) => `<i class="${k < lst.idx ? "done" : k === lst.idx ? "now" : ""}"></i>`).join("")}</div>
+      <div style="text-align:center;margin:12px 0">
+        <button class="icon-btn" style="width:56px;height:56px;font-size:1.6rem" data-act="speak" data-code="id-ID" data-text="${App.esc(p.i)}">🔊</button>
+        <button class="icon-btn" style="width:44px;height:44px" data-act="speak" data-code="id-ID" data-text="${App.esc(p.i)}" data-rate="0.65">🐢</button>
+      </div>
+      <p class="mini-note" style="text-align:center">اكتب ما سمعتَه بالإندونيسية (الترقيم لا يُحسب):</p>
+      <div class="tr-input" style="justify-content:center">
+        <input id="lsTypeIn" type="text" dir="ltr" placeholder="Tulis yang kamu dengar…" autocomplete="off">
+        <button class="btn primary" id="lsTypeGo">تحقق ✓</button>
+        <button class="btn ghost" id="lsTypeHint">💡 التلميح</button>
+      </div>
+      <div id="lsTypeFb"></div>
+    </div>`;
+    const inp = document.getElementById("lsTypeIn"); inp.focus();
+    const check = () => {
+      const val = (inp.value || "").trim();
+      if (!val) { App.toast("اكتب ما سمعته ✍️"); return; }
+      const g = App.Trainer.grade(val, { accept: [{ i: p.i }], keysId: p.i.split(" ").filter(w => w.length > 3).slice(0, 4) }, "id");
+      if (g === 3) { lst.score++; App.langTrack("id", p.id); }
+      else App.addMistake({ q: "🎧 اكتب ما سمعت", correct: p.i, lang: "id", source: "🎧 اسمع واكتب", why: p.n || "" });
+      App.track("listening", 1);
+      document.getElementById("lsTypeFb").innerHTML = `
+        <div class="feedback f${g}"><b class="t">${g === 3 ? "🎉 كتابة مطابقة!" : g === 2 ? "👍 شبه مطابق" : "❌ الصواب:"}</b>
+        <div class="ltext">${App.esc(p.i)}</div><div class="ltrans">معناه: ${App.esc(p.a)} · النطق: ${App.esc(p.it || "")}</div></div>
+        <div style="text-align:center;margin-top:8px"><button class="btn primary sm" id="lsTypeNext">${lst.idx + 1 < lst.pool.length ? "التالي ←" : "إنهاء 🏁"}</button></div>`;
+      document.getElementById("lsTypeNext").addEventListener("click", () => { lst.idx++; App.Views.listenType(); });
+    };
+    document.getElementById("lsTypeGo").addEventListener("click", check);
+    document.getElementById("lsTypeHint").addEventListener("click", () => App.toast("المعنى العربي: " + p.a));
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
   }
 
   /* ============ وضع النجاة ============ */
