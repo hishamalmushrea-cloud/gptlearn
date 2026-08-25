@@ -1,37 +1,39 @@
-# 📱 أندرويد — سوق اللغة
+# سوق اللغة — تطبيق أندرويد أصلي (Kotlin + Jetpack Compose)
 
-تطبيق أندرويد **أوفلاين 100% وبلا صلاحية إنترنت** يغلّف الأكاديمية كاملة (1000 جملة، 33 موقفًا، القصص والقواعد والقاموس وكل الميزات) مع **نطق Android TTS** الأصلي بصوت اللغة المثبت على الجهاز.
+أكاديمية أوفلاين لتعليم **Bahasa Indonesia** و **Türkçe** للمتحدث العربي.
 
-## ⚡ خطوة واحدة مطلوبة منك (مالك المستودع)
-توكن الوكيل ممنوع من إنشاء ملفات GitHub Actions — لصق الملف بنفسك مرة واحدة:
+## ماذا بُني
 
-1. افتح المستودع على GitHub ← فرع `arena/01a036d9-gptlearn`
-2. **Add file ← Create new file** واكتب المسار بالضبط: `.github/workflows/android.yml`
-3. انسخ فيه محتوى [`android/ci/android.yml`](ci/android.yml) (موجود في المستودع) ← Commit
-4. بعد ثوانٍ اكتب للوكيل «ابنِ» — سيشغّل البناء وينزّل الـ APK وينشره كـ Release
+- Jetpack Compose + Material 3 + Navigation
+- DataStore للتقدم (منفصل لكل لغة: XP / CEFR / SRS)
+- محرك مراجعة متباعدة (Again/Hard/Good/Easy)
+- محتوى أصلي: كلمات، عبارات بيع، نجاة، حوارات، قواعد، ثقافة، قصص، أفعال، أدوار
+- بحث ضبابي عربي/إندونيسي/تركي بلا إنترنت
+- TTS نظام أندرويد (لا سحابة) + نطق مكتوب دائمًا
+- وضع ازدواج بنسبة قابلة للضبط، إخفاء العربية، تركيز، 5 دقائق، Shadowing
+- صندوق «نسيت أقولها» محلي بالكامل
+- مدرب حروف تركية (I/ı İ/i) — ميزة حاسمة للعرب
+- تصدير نسخة احتياطية محلية
+- لا صلاحيات شبكة، لا مفاتيح API
 
-## البناء اليدوي (إن كان لديك SDK)
-```bash
-# انسخ محتوى الويب إلى assets ثم:
-cp -r css js data icons index.html manifest.json sw.js android/app/src/main/assets/
-cd android && gradle assembleDebug
-# الناتج: app/build/outputs/apk/debug/app-debug.apk
+## البناء
+
+افتح مجلد `android/` في Android Studio (Hedgehog+ / Koala) و Sync ثم Run.
+
+```
+./gradlew :app:assembleDebug
 ```
 
-## البنية
-```
-android/
-  settings.gradle.kts / build.gradle.kts     AGP 8.5.2 + Kotlin 1.9.24
-  app/build.gradle.kts                       minSdk 24 — بلا أي صلاحية إنترنت
-  app/src/main/java/.../MainActivity.kt      WebViewAssetLoader + جسور JS
-  app/src/main/AndroidManifest.xml           لا INTERNET permission
-  app/src/main/assets/                        يُملأ وقت البناء من جذر الويب
-  ci/android.yml                              ملف CI الجاهز للصق
-```
+`minSdk 24` · `compileSdk/targetSdk 34`
 
-## الجسور (JS ↔ Android)
-- `speechSynthesis` (polyfill) → `AndroidBridge.ttsSpeak` — نطق أصلي مع رسائل لطيفة عند غياب صوت اللغة
-- `AndroidFiles.saveText` → حفظ تصدير التقدم في مجلد التطبيق (`Android/data/app.souq.allughah/files/`)
+## لماذا DataStore بدل Room في النواة الحالية؟
 
-## التثبيت
-APK واحد صغير (~4MB) — ثبّته بتفعيل «مصادر غير معروفة»، ولن يطلب أي إذن أبدًا.
+التقدم صغير (مفاتيح/صناديق SRS). المحتوى التعليمي في حزمة `SeedContent` قابلة للاستبدال بـ JSON/Room لاحقًا دون تغيير الواجهة. تجنب kapt/ksp يسهّل البناء على CI الضعيف. مخطط Room موثّق في `docs/`.
+
+## الصوت
+
+التشغيل الأساسي أوفلاين عبر ملفات النطق المكتوب + TTS الجهاز إن وُجد صوت `id-ID` / `tr-TR`. لا ندّعي دقة نطق مئوية.
+
+## المحتوى
+
+عينة عالية الجودة (ليست Lorem). التوسعة: أضف إلى `SeedContent.kt` أو حزمة JSON بنفس الحقول.
