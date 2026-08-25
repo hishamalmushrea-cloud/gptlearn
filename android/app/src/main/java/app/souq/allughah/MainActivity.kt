@@ -5,21 +5,11 @@ import android.app.Activity
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.webkit.JavascriptInterface
-import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
-import androidx.webkit.WebViewAssetLoader
-import java.io.File
 import java.util.Locale
 
-/**
- * سوق اللغة — غلاف أندرويد أصلي للأكاديمية (أوفلاين 100%)
- *
- * - المحتوى يُقدَّم من assets عبر WebViewAssetLoader (بلا أي صلاحية إنترنت).
- * - النطق عبر محرك Android TTS (جسر JS polyfill لـ speechSynthesis).
- * - تصدير التقدم يُحفظ عبر جسر AndroidFiles إلى مجلد التطبيق.
- */
 class MainActivity : Activity() {
 
     private lateinit var web: WebView
@@ -38,18 +28,12 @@ class MainActivity : Activity() {
         web.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            allowFileAccess = true
+            allowContentAccess = true
             textZoom = 100
         }
 
-        val loader = WebViewAssetLoader.Builder()
-            .setDomain("appassets.androidplatform.net")
-            .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(this))
-            .build()
-
         web.webViewClient = object : WebViewClient() {
-            override fun shouldInterceptUrlRequest(view: WebView, request: WebResourceRequest) =
-                loader.shouldIntercept(request.url)
-
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
                 view.evaluateJavascript(TTS_POLYFILL, null)
@@ -57,21 +41,22 @@ class MainActivity : Activity() {
         }
 
         web.addJavascriptInterface(Bridge(), "AndroidBridge")
-        web.loadUrl("https://appassets.androidplatform.net/index.html")
+        web.loadUrl("file:///android_asset/index.html")
         setContentView(web)
     }
 
-    /** جسر الجافاسكربت: نطق + حفظ ملفات */
     inner class Bridge {
         @JavascriptInterface
         fun ttsSpeak(text: String, lang: String, rate: Float) {
+            val t = tts ?: return
             if (!ttsReady) {
-                runOnUiThread { Toast.makeText(this@MainActivity, "محرك النطق لم يجهز بعد — أعد المحاولة", Toast.LENGTH_SHORT).show() }
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "محرك النطق لم يجهز — أعد المحاولة", Toast.LENGTH_SHORT).show()
+                }
                 return
             }
-            val tts = this@MainActivity.tts ?: return
             val locale = Locale.forLanguageTag(lang)
-            val result = tts.setLanguage(locale)
+            val result = t.setLanguage(locale)
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 runOnUiThread {
                     Toast.makeText(
@@ -82,8 +67,8 @@ class MainActivity : Activity() {
                 }
                 return
             }
-            tts.setSpeechRate(rate.coerceIn(0.3f, 1.5f))
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "gl-$rate")
+            t.setSpeechRate(rate.coerceIn(0.3f, 1.5f))
+            t.speak(text, TextToSpeech.QUEUE_FLUSH, null, "gl-tts")
         }
 
         @JavascriptInterface
@@ -95,7 +80,7 @@ class MainActivity : Activity() {
         fun saveText(name: String, content: String) {
             try {
                 val dir = getExternalFilesDir(null) ?: filesDir
-                val f = File(dir, name.ifBlank { "gl-export.json" })
+                val f = java.io.File(dir, name.ifBlank { "gl-export.json" })
                 f.writeText(content, Charsets.UTF_8)
                 runOnUiThread {
                     Toast.makeText(this@MainActivity, "تم الحفظ: ${f.absolutePath}", Toast.LENGTH_LONG).show()
@@ -125,15 +110,14 @@ class MainActivity : Activity() {
     }
 
     companion object {
-        /** Polyfill يجعل كود الويب (speechSynthesis) يعمل عبر محرك أندرويد دون أي تعديل */
-        private const val TTS_POLYFILL = """
-window.SpeechSynthesisUtterance = function(t){ this.text = (t==null? '' : String(t)); this.lang='id-ID'; this.rate=1; };
-window.speechSynthesis = {
-  getVoices: function(){ return []; },
-  cancel: function(){ AndroidBridge.ttsStop(); },
-  speak: function(u){ AndroidBridge.ttsSpeak(String(u&&u.text||''), String(u&&u.lang||'id-ID'), Number(u&&u.rate||1)); }
-};
-window.AndroidFiles = { saveText: function(n, c){ AndroidBridge.saveText(String(n), String(c)); } };
-        """
+        private val TTS_POLYFILL = """
+            window.SpeechSynthesisUtterance = function(t){ this.text = (t==null? '':String(t)); this.lang='id-ID'; this.rate=1; };
+            window.speechSynthesis = {
+                getVoices: function(){ return []; },
+                cancel: function(){ AndroidBridge.ttsStop(); },
+                speak: function(u){ AndroidBridge.ttsSpeak(String(u&&u.text||''), String(u&&u.lang||'id-ID'), Number(u&&u.rate||1)); }
+            };
+            window.AndroidFiles = { saveText: function(n, c){ AndroidBridge.saveText(String(n), String(c)); } };
+        """.trimIndent()
     }
 }
