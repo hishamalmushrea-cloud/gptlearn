@@ -417,6 +417,7 @@ const App = (() => {
     }
     else if (act === "export") {
       const data = { learned: [...learned], favs: [...favs], leitner: store.get("leitner", {}), date: new Date().toISOString() };
+      if (window.AndroidFiles) { window.AndroidFiles.saveText("gl-progress.json", JSON.stringify(data, null, 2)); toast("تم الحفظ في مجلد التطبيق ✅"); return; }
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "gl-progress.json"; a.click();
       toast("تم تصدير ملف تقدمك ⬇️");
