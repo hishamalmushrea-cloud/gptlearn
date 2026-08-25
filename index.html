@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d7a5f">
+<title>سوق اللغة — تعلّم الإندونيسية والتركية للبائع والمتعامل مع الزبائن</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="wrap hrow">
+    <button class="burger" id="burger" aria-label="القائمة">☰</button>
+    <a href="#/home" class="brand" style="text-decoration:none;color:inherit">
+      <span class="logo">🛍️</span>
+      <span>سوق اللغة<small>الإندونيسية والتركية — نظام البيع والزبائن</small></span>
+    </a>
+    <div class="search-wrap">
+      <input id="gsearch" type="search" placeholder="ابحث بالعربية أو الإندونيسية أو التركية…" autocomplete="off">
+      <span class="sicon">🔍</span>
+    </div>
+    <div class="lang-toggle" id="langToggle" title="اللغة المعروضة">
+      <button data-lang="both">الكل</button>
+      <button data-lang="id">🇮🇩 إندونيسي</button>
+      <button data-lang="tr">🇹🇷 تركي</button>
+    </div>
+  </div>
+</header>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <div class="dhead">🛍️ سوق اللغة</div>
+  <nav id="drawerNav">
+    <a href="#/home">🏠 الرئيسية</a>
+    <a href="#/sales">🛍️ البيع والشراء والزبائن</a>
+    <div class="sect">فصول قسم البيع</div>
+    <div id="drawerChapters"></div>
+    <div class="sect">التدريب والأدوات</div>
+    <a href="#/situations">🎬 المواقف الكاملة</a>
+    <a href="#/bank">⭐ بنك الجمل الجاهزة</a>
+    <a href="#/compare">🔁 المقارنة الثلاثية</a>
+    <a href="#/train">🎭 التدريب التفاعلي</a>
+    <a href="#/cards">🃏 البطاقات والاختبار</a>
+    <a href="#/favs">❤️ عباراتي المحفوظة</a>
+    <div class="sect">الأساس والثقافة</div>
+    <a href="#/basics">🔤 الأساسيات والنطق</a>
+    <a href="#/numbers">🔢 الأرقام والأسعار</a>
+    <a href="#/culture">💡 ثقافة السوق وأسراره</a>
+    <div class="sect">آخر</div>
+    <a href="#/settings">⚙️ الإعدادات والتقدم</a>
+    <a href="#/about">ℹ️ عن التطبيق ودليل التوسعة</a>
+  </nav>
+</aside>
+
+<main id="view" class="wrap"></main>
+
+<nav class="bottom-nav" id="bottomNav">
+  <a href="#/home" data-nav="home"><span class="i">🏠</span>الرئيسية</a>
+  <a href="#/sales" data-nav="sales"><span class="i">🛍️</span>البيع</a>
+  <a href="#/bank" data-nav="bank"><span class="i">⭐</span>الجمل</a>
+  <a href="#/train" data-nav="train"><span class="i">🎭</span>التدريب</a>
+  <a href="#/cards" data-nav="cards"><span class="i">🃏</span>البطاقات</a>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===== البيانات (تُحمّل قبل التطبيق — تعمل أوفلاين بالكامل) ===== -->
+<script src="data/core/basics.js"></script>
+<script src="data/sales/part1.js"></script>
+<script src="data/sales/part2.js"></script>
+<script src="data/sales/part3.js"></script>
+<script src="data/sales/part4.js"></script>
+<script src="data/sales/part5.js"></script>
+<script src="data/sales/part6.js"></script>
+<script src="data/sales/part7.js"></script>
+<script src="data/sales/situations.js"></script>
+<script src="data/sales/culture.js"></script>
+<script src="data/core/analyses.js"></script>
+<script src="data/train/trainers.js"></script>
+<!-- ===== منطق التطبيق ===== -->
+<script src="js/app.js"></script>
+<script src="js/views.js"></script>
+<script src="js/trainer.js"></script>
+<script src="js/cards.js"></script>
+</body>
+</html>
