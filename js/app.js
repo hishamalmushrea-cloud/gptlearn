@@ -59,6 +59,9 @@ const App = (() => {
   function allPhrases() {
     const out = [];
     DB.chapters.forEach(c => (c.phrases || []).forEach(p => out.push({ ...p, ch: c.id, chTitle: c.title })));
+    const B = DB.basics || {};
+    (B.survival || []).forEach(p => out.push({ ...p, ch: "basics", chTitle: "عبارات النجاة" }));
+    ((B.numbers || {}).phrases || []).forEach(p => out.push({ ...p, ch: "numbers", chTitle: "الأرقام والأسعار" }));
     return out;
   }
   function bankSorted() {
