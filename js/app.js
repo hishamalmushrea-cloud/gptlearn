@@ -162,6 +162,7 @@ const App = (() => {
       <a class="module-card" href="#/survival"><div class="ic">🆘</div><h3>وضع النجاة</h3><p>بلمسة واحدة: مطار، طوارئ، مال، فندق، تاكسي، اتجاهات — الجملة المنقذة فورًا.</p></a>
       <a class="module-card" href="#/stories"><div class="ic">📖</div><h3>قصص متدرجة</h3><p>اقرأ واسمع بسرعتين واختبر فهمك — قصص أصلية A1/A2 باللغتين.</p></a>
       <a class="module-card" href="#/progress"><div class="ic">📈</div><h3>تقدمي</h3><p>هدف يومي، سلسلة أيام، مهارات موثقة، وإنجازات صادقة.</p></a>
+      <a class="module-card" href="#/grammar"><div class="ic">🧩</div><h3>القواعد والمستويات</h3><p>منهج قواعد كامل للغتين (29 قاعدة بأمثلة سوقية وأخطاء العرب) + مسارات A0→B2.</p></a>
       <a class="module-card" href="#/write"><div class="ic">✍️</div><h3>تمرين الكتابة</h3><p>رتّب الجمل كلمةً كلمة — بناء جمل حقيقي لا مجرد تذكر.</p></a>
       <a class="module-card" href="#/placement"><div class="ic">🎯</div><h3>اختبار تحديد المستوى</h3><p>12 سؤالًا سريعًا تخبرك من أين تبدأ بالضبط — مع خريطة بداية مخصصة لك.</p></a>
       <a class="module-card" href="#/plan"><div class="ic">🗓️</div><h3>خطة 30 يومًا</h3><p>برنامج يومي 20–30 دقيقة من الصفر إلى أول حوار بيع حقيقي — مرتب حسب فصول التطبيق.</p></a>

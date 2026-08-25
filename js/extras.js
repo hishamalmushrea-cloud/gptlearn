@@ -313,3 +313,41 @@
     App.track("reading");
   };
 })();
+
+/* ============ 🧩 القواعد والمستويات ============ */
+App.Views.grammar = function (tab) {
+  tab = tab || "id";
+  const g = (DB.grammar || []).find(x => x.lang === tab) || DB.grammar[0];
+  const lvOrder = ["A0", "A1", "A2", "B1", "B2"];
+  App.$("#view").innerHTML = `
+  <div class="section-title">🧩 منهج القواعد — بجمل تشتري بها فعلًا <span class="line"></span></div>
+  <div class="callout tip">كل قاعدة: <b>مستواها التقديري ← متى تحتاجها ← صورتها ← أمثلة سوقية ← أشهر خطأ عربي فيها</b>. لا تحفظ الجداول؛ اربط كل قاعدة بجملة من السوق تعرفها.</div>
+  <div class="chips" id="grTabs">
+    ${(DB.grammar || []).map(x => `<button class="chip ${x.lang === g.lang ? "on" : ""}" data-l="${x.lang}">${x.lang === "id" ? "🇮🇩 الإندونيسية" : "🇹🇷 التركية"}</button>`).join("")}
+  </div>
+  <div id="grList">
+  ${[...g.rules].sort((a, b) => lvOrder.indexOf(a.lv) - lvOrder.indexOf(b.lv)).map(r => `
+    <details class="box">
+      <summary>${App.esc(r.t)} <span class="tag">${r.lv}</span></summary>
+      <div class="dbody">
+        <div class="callout info"><b>لماذا تحتاجها؟</b> ${App.esc(r.why)}</div>
+        <div class="ph-note"><b>الصورة:</b> <code class="k">${App.esc(r.form)}</code></div>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>${g.lang === "id" ? "🇮🇩" : "🇹🇷"}</th><th>العربية</th></tr></thead>
+        <tbody>${r.ex.map(e => `<tr><td class="ltr">${App.esc(e[0])}</td><td>${App.esc(e[1])}</td></tr>`).join("")}</tbody></table></div>
+        <div class="callout warn"><b>⚠️ أشهر خطأ عربي هنا:</b> ${App.esc(r.mis)}</div>
+      </div>
+    </details>`).join("")}
+  </div>
+  <div class="section-title">🪜 مسارات المستويات (تقديرية — ليست شهادة) <span class="line"></span></div>
+  <div class="grid-cards">
+    ${(DB.levels || []).map(l => `
+      <div class="chapter-card">
+        <h3>${l.lv} — ${App.esc(l.t)}</h3>
+        ${l.items.map(i => `<p> <a href="${i[0]}">← ${App.esc(i[1])}</a></p>`).join("")}
+      </div>`).join("")}
+  </div>`;
+  document.getElementById("grTabs").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    location.hash = "#/grammar/" + b.dataset.l;
+  });
+};
