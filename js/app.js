@@ -73,7 +73,9 @@ const App = (() => {
 
   /* ---------- عرض بطاقة عبارة ---------- */
   function langBlock(p, which) {
-    if (which === "id") return `
+    if (which === "id") {
+      if (!p.i || p.i === "—") return "";
+      return `
       <div class="lang-block id">
         <div class="lb-head"><span class="flag">🇮🇩</span><span class="lname">الإندونيسية</span>
           <span class="lb-tools">
@@ -83,6 +85,8 @@ const App = (() => {
         <div class="ltext">${esc(p.i)}</div>
         ${p.it ? `<div class="ltrans">النطق: ${esc(p.it)}</div>` : ""}
       </div>`;
+    }
+    if (!p.t || p.t === "—") return "";
     return `
       <div class="lang-block tr">
         <div class="lb-head"><span class="flag">🇹🇷</span><span class="lname">التركية</span>

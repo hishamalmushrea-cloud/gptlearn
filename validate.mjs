@@ -2,7 +2,7 @@ import fs from 'fs';
 import vm from 'vm';
 const sandbox = {}; sandbox.window = sandbox; // window = global كما في المتصفح
 vm.createContext(sandbox);
-const files = ['data/core/basics.js','data/core/survival.js','data/core/stories.js','data/core/dictionary.js','data/core/life1.js','data/core/life2.js','data/core/life3.js','data/core/life4.js','data/core/life5.js','data/core/life6.js','data/core/life7.js','data/core/academy1.js','data/core/academy2.js','data/core/analyses.js','data/sales/part1.js','data/sales/part2.js','data/sales/part3.js','data/sales/part4.js','data/sales/part5.js','data/sales/part6.js','data/sales/part7.js','data/sales/part8.js','data/sales/situations.js','data/sales/culture.js','data/daily/dailySituations.js','data/daily/situations2.js','data/daily/situations3.js','data/train/trainers.js','data/grammar/grammar.js','data/grammar/verbs.js'];
+const files = ['data/core/basics.js','data/core/survival.js','data/core/stories.js','data/core/dictionary.js','data/core/life1.js','data/core/life2.js','data/core/life3.js','data/core/life4.js','data/core/life5.js','data/core/life6.js','data/core/life7.js','data/core/academy1.js','data/core/academy2.js','data/core/analyses.js','data/sales/part1.js','data/sales/part2.js','data/sales/part3.js','data/sales/part4.js','data/sales/part5.js','data/sales/part6.js','data/sales/part7.js','data/sales/part8.js','data/sales/situations.js','data/sales/culture.js','data/daily/dailySituations.js','data/daily/situations2.js','data/daily/situations3.js','data/train/trainers.js','data/grammar/grammar.js','data/grammar/verbs.js','data/core/imported_learn.js'];
 for (const f of files) vm.runInContext(fs.readFileSync(f,'utf8'), sandbox, {filename:f});
 const DB = sandbox.window.DB;
 let phrases = 0, issues = [];
@@ -12,7 +12,10 @@ for (const c of DB.chapters) {
   for (const p of c.phrases||[]) {
     if (ids.has(p.id)) issues.push('مكرر id: '+p.id);
     ids.add(p.id);
-    if (!p.a || !p.i || !p.t) issues.push('حقل ناقص في: '+p.id);
+    if (!p.a) issues.push('حقل ناقص في: '+p.id);
+    if (p.mono === 'id') { if (!p.i) issues.push('حقل i ناقص: '+p.id); }
+    else if (p.mono === 'tr') { if (!p.t) issues.push('حقل t ناقص: '+p.id); }
+    else if (!p.i || !p.t) issues.push('حقل ناقص في: '+p.id);
     if (p.lv<1||p.lv>4) issues.push('lv غير صالح: '+p.id);
     if (!p.p) issues.push('بلا أولوية: '+p.id);
   }
