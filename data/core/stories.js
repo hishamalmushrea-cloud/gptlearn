@@ -65,6 +65,30 @@ qs:[
 ]});
 
 DB.stories.push({
+id:"sto-5", lang:"id", level:"B1", title:"سوق الليل (Pasar Malam)",
+intro:"نص أطول بتراكيب مركبة — ليلة عمل في سوق ليلي بجاكرتا.",
+text:"Pasar malam baru saja buka. Lampu-lampu kecil menghiasi kios-kios. Pak Hasan menata buahnya dengan rapi. Di sebelahnya, mbak Rina menjual gorengan yang aromanya membuat semua orang lapar. Pelanggan pertama adalah ibu-ibu yang habis kerja. \"Bang, jeruk mana yang manis?\" tanya salah satunya. \"Semua manis, Bu. Tapi kalau mau yang paling, ambil yang ini. Coba dulu boleh,\" jawab Pak Hasan sambil tersenyum. Ibu itu mencoba, mengangguk, lalu membeli dua kilo. Semalaman Pak Hasan berjualan. Lelah, tapi hatinya senang. Rezeki malam itu cukup untuk sekolah anaknya.",
+textAr:"السوق الليلي افتتح للتو. أضواء صغيرة تزين الأكشاك. يرتب حسن فاكهته بعناية. وبجانبه تبيع رينا المقليات التي تجعل الجميع جائعًا من رائحتها. الزبائن الأوائل أمهات خرجن من العمل. «يا عمّ، أي البرتقال حلو؟» سألت إحداهن. «كله حلو يا سيدتي، لكن إن أردت الأحلى فخذ هذا — ذوق أولًا يجوز،» أجاب حسن مبتسمًا. ذاقت السيدة وأومأت ثم اشترت كيلوين. باع حسن طوال الليل. تعب لكن قلبه سعيد: رزق تلك الليلة كفى مدرسة ابنه.",
+vocab:[["يزين","menghiasi","منݢهياسي"],["يرتب","menata","مناتا"],["أكشاك","kios-kios","قيوس-قيوس"],["زبائن","pelanggan","پلانݢان"],["يدير رأسه موافقًا","mengangguk","منݢانݢوق"],["تعب","lelah","ليله"],["رزق","rezeki","ريزيقي"]],
+qs:[
+{q:"كيف تعامل حسن مع سؤال «أيها أحلى؟»", opts:["قال كله سواء","عرض التذوق واقترح الأفضل","رفض الإجابة"], ok:1},
+{q:"لماذا كان قلب حسن سعيدًا رغم التعب؟", opts:["أغلق مبكرًا","رزق الليلة كفى مدرسة ابنه","باع أكشاكه"], ok:1},
+{q:"«menghiasi» تعني:", opts:["تزين","تشتري","تنظف"], ok:0}
+]});
+
+DB.stories.push({
+id:"sto-6", lang:"tr", level:"B1", title:"بائع البازار (Pazarcı Hasan)",
+intro:"ماضٍ وسماعي (-miş) وشرط — يوم كامل لبائع في بازار إسطنبولي.",
+text:"Hasan Usta sabah beşte kalkmış; çünkü pazar günüymüş. Tezgâhını kurmuş, domatesleri dizerken ilk müşteri gelmiş. \"Abi, domatesler yerli mi?\" \"Yerli, Antalya'dan bu sabam geldi. Tatlı tatlı, ekmek arası ye!\" Müşteri gülümsemiş, iki kilo almış. Öğlene doğru fiyatlar düşmüş; çünkü akşamüstü mal bitmek istiyormuş. Hasan Usta seslenmiş: \"Son fiyat! Kalanlar gitsin, yarın taze gelsin!\" Bir kadın yaklaşmış: \"İki kilo alsam indirim olur mu?\" \"Olur mu olmaz mı — üç kilo alırsan olur!\" diye gülmüş. Akşam tezgâh boşalmış. Hasan Usta çayını yudumlarken düşünmüş: \"Yorulduk ama bereket var.\" Ertesi hafta aynı kadın yine gelmiş, bu sefer komşusunu da getirmiş.",
+textAr:"يُقال إن حسن أوستا استيقظ الخامسة فجرًا؛ لأن اليوم يوم سوق. نصب طاولته ورتب الطماطم فجاء أول زبون: «يا أخي، طماطمكم محلية؟» «محلية، جاءت من أنطاليا هذا الصباح — حلوة حلوة، كُلها بالخبز!» ابتسم الزبون وأخذ كيلوين. قرب الظهر هبطت الأسعار؛ لأن البضاعة كانت تريد النفاد قبل العصر. نادى حسن: «آخر سعر! ليذهب الباقي ويأتي الطازج غدًا!» اقتربت سيدة: «لو أخذت كيلوين ينفع خصم؟» ضاحكًا: «ينفع ولا لا — لو أخذت ثلاثة ينفع!» المساء: خلت الطاولة، وارتشف حسن شايه مفكرًا: «تعبنا لكن فيها بركة.» الأسبوع التالي عادت السيدة نفسها، وجاءت هذه المرة بجارتها أيضًا.",
+vocab:[["نصب طاولته","tezgâhını kurmuş","تزّاهيني قورمش"],["محلي","yerli","يرلي"],["خفض السعر","fiyat düşmüş","ليات دوشموش"],["ينفد","bitmek istiyormuş","بيتمك إستيورموش"],["ارتشف","yudumlamak","يودوملامق"],["بركة","bereket","بركت"]],
+qs:[
+{q:"لماذا خفض حسن الأسعار قرب الظهر؟", opts:["البضاعة كانت ستنفد قبل العصر","الزبون غاضب","الطماطم فسدت"], ok:0},
+{q:"ماذا فعلت السيدة في الأسبوع التالي؟", opts:["لم تعد","عادت وجاءت بجارتها","اشتكت منه"], ok:1},
+{q:"«bereket var» تعني:", opts:["فيها خسارة","فيها بركة","فيها زحمة"], ok:1}
+]});
+
+DB.stories.push({
 id:"sto-4", lang:"tr", level:"A2", title:"السائح التائه (Kaybolan Turist)",
 intro:"قصة بالماضي التركي — لقاء إنساني في إسطنبول.",
 text:"Dün akşam bir turist sokakta durdu. Kaybolmuştu. Elinde bir harita vardı. Bakkaldaki Amca ona seslendi: \"Hoş geldiniz! Bir sorun mu var?\" Turist üzgün cevap verdi: \"Otelimi bulamıyorum.\" Amca haritaya baktı. \"Oteliniz çok yakın. Şu sokaktan düz gidin, sonra sola dönün. Beş dakika sürer.\" Turist çok mutlu oldu. \"Çok teşekkür ederim!\" \"Rica ederim. İyi tatiller!\" Ertesi gün turist yine geldi. Amcaya çikolata hediye etti. Artık her sabah \"Günaydın Amca!\" der.",

@@ -41,7 +41,7 @@
 
 
   /* ============ تتبع النشاط والمهارات ============ */
-  const KINDS = { vocab: "📚 مفردات", cards: "🃏 مراجعة", quiz: "📝 اختبار", conversation: "🎭 محادثة", listening: "🎧 استماع", reading: "📖 قراءة", test: "🎯 اختبار مستوى" };
+  const KINDS = { vocab: "📚 مفردات", cards: "🃏 مراجعة", quiz: "📝 اختبار", grammar: "🧩 قواعد", conversation: "🎭 محادثة", listening: "🎧 استماع", reading: "📖 قراءة", test: "🎯 اختبار مستوى" };
   App.track = function (kind, n) {
     const d = new Date().toISOString().slice(0, 10);
     const a = App.store.get("activity", {});
@@ -514,3 +514,64 @@ App.Views.grammar = function (tab) {
     location.hash = "#/grammar/" + b.dataset.l;
   });
 };
+
+/* ============ ⚡ مدرب الأفعال ============ */
+let vb = { lang: "tr", verb: null, drill: null };
+App.Views.verbs = function (tab) {
+  vb.lang = tab === "id" ? "id" : "tr";
+  const g = DB.verbs.find(x => x.lang === vb.lang);
+  vb.verb = vb.verb && g.list.some(v => v.id === vb.verb.id) && DB.verbs.find(x => x.lang === vb.lang).list.find(v => v.id === vb.verb.id) ? vb.verb : g.list[0];
+  vb.drill = null;
+  renderVerbs();
+};
+function renderVerbs() {
+  const g = DB.verbs.find(x => x.lang === vb.lang);
+  const v = g.list.find(x => x.id === vb.verb.id) || g.list[0];
+  const code = vb.lang === "id" ? "id-ID" : "tr-TR";
+  const formsTable = v.pres
+    ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>الضمير</th><th>الحاضر (الآن)</th><th>الماضي</th></tr></thead>
+       <tbody>${v.pres.map((row, i) => `<tr><td><b>${row[0]}</b></td><td class="ltr">${row[1]}</td><td class="ltr">${(v.past[i] || [])[1] || ""}</td></tr>`).join("")}</tbody></table></div>`
+    : `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>الصورة</th><th>المعنى</th></tr></thead>
+       <tbody>${v.forms.map(f => `<tr><td class="ltr">${f[0]}</td><td>${f[1]}</td></tr>`).join("")}</tbody></table></div>`;
+  App.$("#view").innerHTML = `
+  <div class="section-title">⚡ مدرب الأفعال — أعصاب اللغة <span class="line"></span></div>
+  <div class="callout tip">اختر فعلًا: تصريفاته (أو صوره) وأمثلة حية ثم <b>تمرين مطابقة</b> يختبر حفظك. الأفعال هنا ليست حشوًا — كل واحد منها تسمعه كل يوم في السوق.</div>
+  <div class="chips" id="vbTabs">
+    <a class="chip ${vb.lang === "tr" ? "on" : ""}" href="#/verbs/tr">🇹🇷 التركية</a>
+    <a class="chip ${vb.lang === "id" ? "on" : ""}" href="#/verbs/id">🇮🇩 الإندونيسية</a>
+  </div>
+  <div class="chips" id="vbList">${g.list.map(x => `<button class="chip ${x.id === v.id ? "on" : ""}" data-v="${x.id}">${x.ar}</button>`).join("")}</div>
+  <div class="box">
+    <h3><span class="ltr">${v.inf}</span> — ${v.ar} <button class="icon-btn" data-act="speak" data-code="${code}" data-text="${App.esc(v.inf)}">🔊</button></h3>
+    <p class="mini-note">${App.esc(v.note)}</p>
+    ${formsTable}
+    ${v.ex.map(e => `<div class="lang-block ${vb.lang === "id" ? "id" : "tr"}"><div class="ltext">${App.esc(e[0])} <button class="icon-btn" data-act="speak" data-code="${code}" data-text="${App.esc(e[0])}">🔊</button></div><div class="ltrans">${App.esc(e[1])}</div></div>`).join("")}
+    <div style="margin-top:10px"><button class="btn primary sm" id="vbDrill">🎯 تمرين مطابقة سريع</button></div>
+    <div id="vbDrillArea" style="margin-top:10px"></div>
+  </div>`;
+  document.getElementById("vbList").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    vb.verb = g.list.find(x => x.id === b.dataset.v); renderVerbs();
+  });
+  document.getElementById("vbDrill").addEventListener("click", () => {
+    App.track("grammar", 1);
+    const rows = (v.pres || v.forms);
+    const row = rows[Math.floor(Math.random() * rows.length)];
+    const others = rows.filter(r => r !== row).sort(() => Math.random() - .5).slice(0, 2);
+    const opts = [row, ...others].sort(() => Math.random() - .5);
+    document.getElementById("vbDrillArea").innerHTML = `
+      <div class="tr-prompt">ما صيغة «<b>${row[0]}</b>» مع <b>${v.inf}</b>؟</div>
+      <div id="vbOpts">${opts.map(o => `<button class="quiz-opt" data-ok="${o === row ? 1 : 0}">${App.esc(o[1])}</button>`).join("")}</div>
+      <div id="vbFb"></div>`;
+    document.getElementById("vbOpts").addEventListener("click", e => {
+      const b = e.target.closest(".quiz-opt"); if (!b) return;
+      const ok = b.dataset.ok === "1";
+      if (!ok) App.addMistake({ q: `تصريف ${v.inf} مع ${row[0]}`, correct: row[1], lang: vb.lang, source: "⚡ أفعال", why: v.note });
+      App.track("grammar", 1);
+      document.querySelectorAll("#vbOpts .quiz-opt").forEach(x => {
+        if (x.dataset.ok === "1") x.classList.add("right"); else if (x === b) x.classList.add("wrong");
+      });
+      document.getElementById("vbFb").innerHTML = `<div class="feedback ${ok ? "f3" : "f1"}"><b class="t">${ok ? "🎉 صحيح!" : "❌ الصحيح: " + row[1]}</b></div>`;
+    });
+  });
+}
