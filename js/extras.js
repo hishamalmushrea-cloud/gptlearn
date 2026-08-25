@@ -575,3 +575,106 @@ function renderVerbs() {
     });
   });
 }
+
+/* ============ 📖 القاموس ============ */
+let dc = { lang: "id", q: "", lv: "all" };
+App.Views.dict = function () {
+  renderDict();
+  function list() {
+    const nq = App.norm(dc.q);
+    return (DB.words[dc.lang] || []).filter(w =>
+      (dc.lv === "all" || w.l === dc.lv) &&
+      (!nq || App.norm(w.w).includes(nq) || App.norm(w.a).includes(nq) || App.norm(w.p).includes(nq)));
+  }
+  function renderDict() {
+    const lvs = [...new Set((DB.words[dc.lang] || []).map(w => w.l))].sort();
+    const rows = list();
+    App.$("#view").innerHTML = `
+    <div class="section-title">📖 القاموس الأساسي — كلمات الحياة والسوق <span class="line"></span></div>
+    <div class="callout tip">${(DB.words.id||[]).length + (DB.words.tr||[]).length} كلمة مختارة بأعلى معايير الاستعمال اليومي: لكل كلمة <b>نطقها بالعربية + نوعها + مستواها + مثال حي بصوته</b>. الكلمات مقصودة العدد — كلمة تعيش معك خير من عشر تُنسى (قاعدة المواصفة §76).</div>
+    <div class="chips">
+      <a class="chip ${dc.lang === "id" ? "on" : ""}" href="#/dict" data-l="id">🇮🇩 الإندونيسية</a>
+      <a class="chip ${dc.lang === "tr" ? "on" : ""}" href="#/dict" data-l="tr">🇹🇷 التركية</a>
+    </div>
+    <div class="search-wrap" style="max-width:420px;margin:10px 0">
+      <input id="dcQ" type="search" placeholder="ابحث بالعربية أو اللغة الهدف…" value="${App.esc(dc.q)}">
+    </div>
+    <div class="chips" id="dcLv">
+      <button class="chip ${dc.lv === "all" ? "on" : ""}" data-lv="all">الكل</button>
+      ${lvs.map(l => `<button class="chip ${dc.lv === l ? "on" : ""}" data-lv="${l}">${l}</button>`).join("")}
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>الكلمة</th><th>النطق</th><th>المعنى</th><th>النوع</th><th>المستوى</th><th>مثال حي</th></tr></thead>
+      <tbody>${rows.map(w => `
+        <tr>
+          <td class="ltr"><b>${App.esc(w.w)}</b> <button class="icon-btn" style="width:26px;height:26px;font-size:.8rem" data-act="speak" data-code="${dc.lang === "id" ? "id-ID" : "tr-TR"}" data-text="${App.esc(w.w)}">🔊</button></td>
+          <td>${App.esc(w.p)}</td><td>${App.esc(w.a)}</td><td><span class="tag">${App.esc(w.s)}</span></td><td><span class="tag">${w.l}</span></td>
+          <td class="ltr">${App.esc(w.x[0])} <button class="icon-btn" style="width:26px;height:26px;font-size:.8rem" data-act="speak" data-code="${dc.lang === "id" ? "id-ID" : "tr-TR"}" data-text="${App.esc(w.x[0])}">🔊</button><div class="mini-note">${App.esc(w.x[1])}</div></td>
+        </tr>`).join("")}</tbody>
+    </table></div>
+    <p class="mini-note">النتائج: ${rows.length} — الكلمات هنا تظهر أيضًا تلقائيًا في البحث العام للواجهة ضمن العبارات.</p>`;
+    document.getElementById("dcQ").addEventListener("input", e => { dc.q = e.target.value; renderDict(); document.getElementById("dcQ").focus(); const v = document.getElementById("dcQ"); v.setSelectionRange(v.value.length, v.value.length); });
+    document.getElementById("dcLv").addEventListener("click", e => { const b = e.target.closest(".chip"); if (!b) return; dc.lv = b.dataset.lv; renderDict(); });
+    document.querySelector('.chips [data-l="id"], .chips [data-l="tr"]');
+    document.querySelectorAll('.chips a[data-l]').forEach(a => a.addEventListener("click", () => { dc.lang = a.dataset.l; dc.q = ""; }));
+  }
+};
+
+/* ============ 📦 حزم المحتوى: تصدير والتحقق (§47–48، §67) ============ */
+App.Views.packs = function () {
+  App.$("#view").innerHTML = `
+  <div class="section-title">📦 حزم المحتوى — تصدير والتحقق <span class="line"></span></div>
+  <div class="callout tip">المحتوى كله مفتوح وقابل للنقل: صدّره كحزمة JSON موقّعة بالميتاداتا (لغة/مستوى/إصدار/مخطط)، ثم تحقق من أي حزمة (حتى تعديلاتك المستقبلية) بأداة الفحص المدمجة قبل دمجها. هذا جوهر «حزم المحتوى المُصدَّرة» في المواصفة §47.</div>
+  <div class="box">
+    <h3>⬇️ تصدير الحزمة الحالية</h3>
+    <p class="mini-note">تُصدَّر كل البيانات (فصول، مواقف، قصص، قواعد، أفعال، قاموس، تحليلات، تدريب) مع ميتاداتا الحزمة وسكاشن للتقدم غير مشمولة (تقدمك يبقى بجهازك).</p>
+    <button class="btn primary sm" id="pkExport">📦 نفّذ التصدير</button>
+    <div id="pkInfo" class="mini-note" style="margin-top:8px"></div>
+  </div>
+  <div class="box">
+    <h3>✅ أداة التحقق من حزمة (Upload & Validate)</h3>
+    <p class="mini-note">تفحص: البنية، المعرفات الفريدة، الحقول الإلزامية، الإحصاءات — وتعطيك تقريرًا واضحًا (§67: أخطاء مفيدة لا انهيارات).</p>
+    <input type="file" id="pkFile" accept=".json" style="margin:8px 0">
+    <div id="pkReport"></div>
+  </div>`;
+  document.getElementById("pkExport").addEventListener("click", () => {
+    const pack = {
+      contentPack: { id: "gl-full-" + new Date().toISOString().slice(0, 10), name: "سوق اللغة — الحزمة الكاملة", languages: ["id", "tr"], version: 1, schemaVersion: 1, exportedAt: new Date().toISOString(), source: "original", license: "project-proprietary" },
+      stats: { chapters: DB.chapters.length, phrases: App.allPhrases().length, situations: DB.situations.length, stories: (DB.stories || []).length, grammar: (DB.grammar || []).reduce((a, g) => a + g.rules.length, 0), words: Object.values(DB.words || {}).reduce((a, l) => a + l.length, 0), culture: DB.culture.length, analyses: DB.analyses.length, trainers: DB.trainers.length },
+      content: { chapters: DB.chapters, situations: DB.situations, stories: DB.stories, grammar: DB.grammar, verbs: DB.verbs, words: DB.words, culture: DB.culture, analyses: DB.analyses, trainers: DB.trainers, basics: DB.basics }
+    };
+    try {
+      const blob = new Blob([JSON.stringify(pack, null, 1)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = (window.URL && URL.createObjectURL) ? URL.createObjectURL(blob) : "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(pack));
+      a.download = pack.contentPack.id + ".json"; a.click();
+    } catch (e) { App.toast("تعذّر التصدير في هذه البيئة — جرّب متصفحًا آخر"); }
+    document.getElementById("pkInfo").textContent = "تم التصدير ✅ — " + pack.contentPack.id + " (" + Object.keys(pack.content).length + " أقسام محتوى)";
+    App.toast("تم تصدير الحزمة ⬇️");
+  });
+  document.getElementById("pkFile").addEventListener("change", e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const rep = (ok, msg) => document.getElementById("pkReport").innerHTML = `<div class="feedback ${ok ? "f3" : "f1"}"><b class="t">${ok ? "✅ حزمة سليمة" : "❌ فشل التحقق"}</b>${msg}</div>`;
+      try {
+        const p = JSON.parse(r.result);
+        const errs = [], warns = [], stats = [];
+        if (!p.contentPack) errs.push("لا توجد contentPack بالميتاداتا (§47)");
+        else {
+          stats.push("الحزمة: " + (p.contentPack.id || "بلا معرف"));
+          if (!p.contentPack.id) errs.push("contentPack بلا id");
+          if (!p.contentPack.schemaVersion) warns.push("بلا schemaVersion — ستفشل الترقيات المستقبلية");
+        }
+        const c = p.content || {};
+        const ids = new Set();
+        const checkDup = (arr, label) => { (arr || []).forEach(x => { if (x.id) { if (ids.has(x.id)) errs.push("معرف مكرر: " + x.id); ids.add(x.id); } else errs.push(label + " فيه عنصر بلا id"); }); };
+        checkDup(c.chapters, "الفصول"); checkDup(c.situations, "المواقف"); checkDup(c.stories, "القصص");
+        (c.chapters || []).forEach(ch => (ch.phrases || []).forEach(ph => { if (!ph.a || !ph.i || !ph.t) errs.push("عبارة ناقصة الحقول في " + ch.id); }));
+        stats.push("الفصول: " + (c.chapters || []).length + " · العبارات: " + ((c.chapters || []).reduce((a, x) => a + (x.phrases || []).length, 0)) + " · المواقف: " + (c.situations || []).length + " · القصص: " + (c.stories || []).length + " · القواعد: " + ((c.grammar || []).reduce((a, g) => a + (g.rules || []).length, 0)));
+        rep(errs.length === 0, (errs.length ? "<div>⚠️ " + errs.slice(0, 8).join("<br>") + "</div>" : "") + (warns.length ? "<div class='mini-note'>" + warns.join("<br>") + "</div>" : "") + "<div class='mini-note'>" + stats.join("<br>") + "</div>");
+      } catch (err) { rep(false, "<div>ملف غير صالح JSON: " + App.esc(err.message) + "</div>"); }
+    };
+    r.readAsText(f);
+  });
+};

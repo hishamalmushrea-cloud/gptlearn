@@ -1,12 +1,12 @@
 /* ===== Service Worker: تخزين مؤقت كامل للعمل دون إنترنت ===== */
-const CACHE = "gl-cache-v7";
+const CACHE = "gl-cache-v8";
 const ASSETS = [
   "./", "./index.html", "./manifest.json",
   "./css/style.css",
   "./js/app.js", "./js/views.js", "./js/extras.js", "./js/trainer.js", "./js/cards.js",
-  "./data/core/basics.js", "./data/core/survival.js", "./data/core/stories.js", "./data/core/academy1.js", "./data/core/academy2.js", "./data/core/analyses.js",
+  "./data/core/basics.js", "./data/core/survival.js", "./data/core/stories.js", "./data/core/dictionary.js", "./data/core/dictionary.js", "./data/core/academy1.js", "./data/core/academy2.js", "./data/core/analyses.js",
   "./data/sales/part1.js", "./data/sales/part2.js", "./data/sales/part3.js", "./data/sales/part4.js",
-  "./data/sales/part5.js", "./data/sales/part6.js", "./data/sales/part7.js",
+  "./data/sales/part5.js", "./data/sales/part6.js", "./data/sales/part7.js", "./data/sales/part8.js",
   "./data/sales/situations.js", "./data/sales/culture.js", "./data/daily/dailySituations.js", "./data/daily/situations2.js", "./data/daily/situations3.js",
   "./data/train/trainers.js", "./data/grammar/grammar.js", "./data/grammar/verbs.js",
   "./icons/icon-192.png", "./icons/icon-512.png"
