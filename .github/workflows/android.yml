@@ -22,18 +22,20 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: false
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.7'
+      - name: Install Gradle manually (bypass broken Actions cache service)
+        run: |
+          curl -sL -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q /tmp/gradle.zip -d "$HOME/tools"
+          echo "$HOME/tools/gradle-8.7/bin" >> "$GITHUB_PATH"
 
       - name: Copy web academy into Android assets
         run: |
           mkdir -p android/app/src/main/assets
           cp -r css js data icons index.html manifest.json sw.js android/app/src/main/assets/
 
-      - name: Build debug APK (أوفلاين — بلا صلاحية إنترنت)
+      - name: Build debug APK (offline app — no internet permission)
         run: gradle -p android assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK artifact
