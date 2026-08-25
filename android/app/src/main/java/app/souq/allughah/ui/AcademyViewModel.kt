@@ -7,6 +7,8 @@ import app.souq.allughah.audio.TtsPlayer
 import app.souq.allughah.data.SeedContent
 import app.souq.allughah.data.UserStore
 import app.souq.allughah.domain.*
+import app.souq.allughah.domain.Sm2Scheduler
+import app.souq.allughah.domain.Sm2State
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -71,7 +73,11 @@ class AcademyViewModel(app: Application) : AndroidViewModel(app) {
         val now = System.currentTimeMillis()
         val map = parseSrs()
         val cur = map[id] ?: ReviewCard(id, kind, 0, now, 0, 0)
-        map[id] = LearningEngine.applyGrade(cur, g, now)
+        val sm = Sm2Scheduler.schedule(
+            Sm2State(id, kind, snapshot.value.activeLang, cur.reps, cur.box, 2.5, cur.dueAt, cur.lapses, cur.reps, (cur.reps - cur.lapses).coerceAtLeast(0)),
+            g, now
+        )
+        map[id] = ReviewCard(id, kind, sm.intervalDays.coerceAtMost(5), sm.dueAt, sm.lapses, sm.repetitions)
         saveSrs(map)
         viewModelScope.launch {
             store.addXp(snapshot.value.activeLang, if (g == SrsGrade.Again) 1 else 4)

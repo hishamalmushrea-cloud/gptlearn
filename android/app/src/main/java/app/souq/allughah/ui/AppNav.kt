@@ -62,6 +62,7 @@ fun AcademyRoot(vm: AcademyViewModel) {
             composable("shadow") { ShadowScreen(vm) }
             composable("letters") { LetterTrainer() }
             composable("chat") { PhraseList(vm, "دردشة") }
+            composable("library") { LibraryScreen(vm) }
         }
     }
 }
@@ -377,6 +378,7 @@ fun MoreScreen(vm: AcademyViewModel, nav: NavHostController) {
             "قارن اللغتين" to "compare",
             "قصص" to "stories",
             "مدرب الأفعال" to "verbs",
+            "المكتبة المرجعية" to "library",
             "تحديد مستوى" to "placement",
             "حروف تركية" to "letters",
             "تقدمي" to "progress",
