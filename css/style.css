@@ -256,3 +256,10 @@ details.box .dbody{margin-top:10px}
 .natural{color:var(--ok);font-weight:800} .unnatural{color:var(--warn);font-weight:800}
 .mini-note{font-size:.78rem;color:var(--sub)}
 code.k{background:#eef2f6;border-radius:6px;padding:0 6px;font-size:.85em;direction:ltr;display:inline-block}
+
+/* ===== أنماط الحوار: إخفاء الترجمة/النص (§18) ===== */
+.hide-ar .bubble .ar, .hide-ar .flip-face.flip-front .big {display:none}
+.hide-tl #view .bubble .lang-block {display:none}
+.wtap{cursor:pointer;border-bottom:1px dotted #94a3b8}
+.wtap:hover{background:var(--amber-soft)}
+#dictPop{position:fixed;z-index:150;max-width:300px;background:#fff;border:2px solid var(--brand);border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.2)}

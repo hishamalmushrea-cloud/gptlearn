@@ -12,7 +12,7 @@ const App = (() => {
     set(key, val) { try { localStorage.setItem("gl_" + key, JSON.stringify(val)); } catch (e) {} }
   };
   let settings = store.get("settings", { lang: "both" });
-  let learned = new Set(store.get("learned", []));
+    let learned = new Set(store.get("learned", []));
   let favs = new Set(store.get("favs", []));
 
   const saveLearned = () => store.set("learned", [...learned]);
@@ -400,7 +400,7 @@ const App = (() => {
   document.addEventListener("click", e => {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const act = b.dataset.act;
-    if (act === "speak") speak(b.dataset.text, b.dataset.code, b.dataset.rate ? parseFloat(b.dataset.rate) : undefined);
+    if (act === "speak") speak(b.dataset.text, b.dataset.code, b.dataset.rate ? parseFloat(b.dataset.rate) : (App.slowMode ? 0.65 : undefined));
     else if (act === "copy") copyText(b.dataset.text);
     else if (act === "learn") {
       const id = b.dataset.id;

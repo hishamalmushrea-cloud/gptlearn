@@ -1,5 +1,5 @@
 /* ===== Service Worker: تخزين مؤقت كامل للعمل دون إنترنت ===== */
-const CACHE = "gl-cache-v11";
+const CACHE = "gl-cache-v12";
 const ASSETS = [
   "./", "./index.html", "./manifest.json",
   "./css/style.css",

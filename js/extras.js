@@ -1,3 +1,4 @@
+App.slowMode = false; /* وضع الصوت البطيء العام (§18) — يُضبط من أزرار الحوار */
 /* ===== وضع النجاة + القصص + أخطائي + صفحة التقدم (مهارات/سلسلة/إنجازات/هدف يومي) ===== */
 "use strict";
 
@@ -441,7 +442,8 @@
     <div class="box">
       <h3>${s.lang === "id" ? "🇮🇩" : "🇹🇷"} ${esc(s.title)} <span class="tag">${s.level}</span></h3>
       <p class="mini-note">${esc(s.intro || "")}</p>
-      <div class="ltext" style="font-size:1.12rem;line-height:2.2;background:#f6f9fc;border-radius:12px;padding:14px">${esc(s.text)}</div>
+      <div class="ltext" id="storyText" style="font-size:1.12rem;line-height:2.2;background:#f6f9fc;border-radius:12px;padding:14px">${esc(s.text).split(/(\s+)/).map(w => /[A-Za-z\u00c7\u00e7\u011e\u011f\u0130\u0131\u00d6\u00f6\u015e\u015f\u00dc\u00fc-]/.test(w) ? `<span class="wtap" data-w="${w.replace(/[^A-Za-z\u00c7\u00e7\u011e\u011f\u0130\u0131\u00d6\u00f6\u015e\u015f\u00dc\u00fc-]/g, "")}">${w}</span>` : w).join("")}</div>
+      <p class="mini-note" style="margin-top:6px">💡 المس أي كلمة في النص لترى معناها من القاموس (§29)</p>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
         <button class="btn primary sm" data-act="speak" data-code="${code}" data-text="${esc(s.text)}" data-rate="1">🔊 استماع عادي</button>
         <button class="btn ghost sm" data-act="speak" data-code="${code}" data-text="${esc(s.text)}" data-rate="0.65">🐢 استماع بطيء</button>
@@ -474,6 +476,31 @@
       });
     });
     App.track("reading");
+    // ===== نقر الكلمات → القاموس (§29) =====
+    const st = document.getElementById("storyText");
+    if (st) st.addEventListener("click", e => {
+      const w = e.target.closest(".wtap"); if (!w) return;
+      const raw = w.dataset.w.toLowerCase();
+      const code = s.lang === "id" ? "id-ID" : "tr-TR";
+      const dict = DB.words[s.lang] || [];
+      const hit = dict.find(x => x.w.toLowerCase() === raw) || (raw.length > 3 ? dict.find(x => x.w.toLowerCase().startsWith(raw)) : null);
+      const old = document.getElementById("dictPop"); if (old) old.remove();
+      const pop = document.createElement("div");
+      pop.id = "dictPop";
+      pop.innerHTML = hit ? `
+        <b class="ltr">${App.esc(hit.w)}</b> <button class="icon-btn" style="width:26px;height:26px;font-size:.8rem" data-act="speak" data-code="${code}" data-text="${App.esc(hit.w)}">🔊</button>
+        <div>${App.esc(hit.a)}</div>
+        <div class="mini-note">${App.esc(hit.p)} · ${hit.l} · ${App.esc(hit.s)}</div>
+        <div class="mini-note ltr">${App.esc(hit.x[0])} — ${App.esc(hit.x[1])}</div>` :
+        `<b class="ltr">${App.esc(raw)}</b>
+         <div class="mini-note">ليست في القاموس الأساسي — <button class="icon-btn" style="width:26px;height:26px;font-size:.8rem" data-act="speak" data-code="${code}" data-text="${App.esc(raw)}">🔊 اسمعها</button></div>
+         <div class="mini-note"><a href="#/dict">افتح القاموس للبحث ↗</a></div>`;
+      document.body.appendChild(pop);
+      const r = w.getBoundingClientRect();
+      pop.style.top = Math.max(10, Math.min(r.bottom + 8, window.innerHeight - 180)) + "px";
+      pop.style.left = Math.max(10, Math.min(r.left, window.innerWidth - 330)) + "px";
+      setTimeout(() => document.addEventListener("click", function close(ev) { if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener("click", close); } }), 50);
+    });
   };
 })();
 

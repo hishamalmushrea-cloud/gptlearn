@@ -4,6 +4,7 @@
 (function () {
   const { esc, $, toast, bankSorted, allPhrases, chapter } = App;
   const BOX_KEY = "leitner"; // id -> {box:1..5, due:ts}
+  const BOX_LABELS = { 1: "جديدة", 2: "يتعلّم", 3: "مألوفة", 4: "قوية", 5: "متقنة 💎" }; // §12
   let cfg = { deck: "bank50", dir: "id" };
   let run = null;
 
@@ -20,6 +21,10 @@
     if (cfg.deck === "bank500") return bank.slice(0, 500);
     if (cfg.deck === "all") return allPhrases();
     if (cfg.deck === "favs") return [...App.favs].map(id => allPhrases().find(p => p.id === id)).filter(Boolean);
+    if (["p1", "p2", "p3"].includes(cfg.deck)) {
+      const pool = { p1: bank.slice(0, 50), p2: bank.slice(0, 100), p3: bank.slice(0, 250) }[cfg.deck];
+      return pool;
+    }
     if (cfg.deck === "todo") return allPhrases().filter(p => !App.learned.has(p.id));
     if (cfg.deck.startsWith("ch:")) { const c = chapter(cfg.deck.slice(3)); return c ? (c.phrases || []) : []; }
     return bank.slice(0, 50);
@@ -47,15 +52,18 @@
       <div class="chips" id="dirChips">
         <button class="chip ${cfg.dir === "id" ? "on" : ""}" data-dir="id">عربي ← 🇮🇩 إندونيسي</button>
         <button class="chip ${cfg.dir === "tr" ? "on" : ""}" data-dir="tr">عربي ← 🇹🇷 تركي</button>
+        <button class="chip ${cfg.dir === "idr" ? "on" : ""}" data-dir="idr">🇮🇩 ← عربي (استرجاع)</button>
+        <button class="chip ${cfg.dir === "trr" ? "on" : ""}" data-dir="trr">🇹🇷 ← عربي (استرجاع)</button>
+        <button class="chip ${["p1","p2","p3"].includes(cfg.deck) ? "on" : ""}" data-d="p1">🎯 أهم 50 (استرجاع)</button>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="btn primary" id="startCards">🃏 ابدأ البطاقات</button>
         <button class="btn ghost" id="startQuiz">📝 ابدأ الاختبار (10 أسئلة)</button>
       </div>
       <div class="stats" style="margin-top:14px">
-        ${dist.map((n, i) => `<div class="stat"><b>${n}</b><span>صندوق ${i + 1}</span></div>`).join("")}
+        ${dist.map((n, i) => `<div class="stat"><b>${n}</b><span>${BOX_LABELS[i + 1]}</span></div>`).join("")}
       </div>
-      <p class="mini-note">صندوق 5 = محفوظة في الذاكرة طويلة المدى تقريبًا 💎</p>
+      <p class="mini-note">حالات المراجعة (§12): جديدة ← يتعلّم ← مألوفة ← قوية ← متقنة. فواصل موثقة: 1/2/4/8/16 يومًا.</p>
     </div>
     <div class="box">
       <h3>🗂️ أو تدرّب على فصل محدد</h3>
@@ -100,17 +108,24 @@
       <div class="flip ${run.flipped ? "on" : ""}" id="flipCard">
         <div class="flip-inner">
           <div class="flip-face flip-front">
-            <div class="mini-note" style="color:#dFF;margin-bottom:6px">${esc(p.chTitle || "")} ${b ? `· صندوق ${b.box}` : ""}</div>
-            <div class="big">${esc(p.a)}</div>
+            <div class="mini-note" style="color:#dFF;margin-bottom:6px">${esc(p.chTitle || "")} ${b ? `· ${BOX_LABELS[b.box]}` : ""}</div>
+            ${(cfg.dir === "idr" || cfg.dir === "trr") ? `
+            <div class="big ltr">${esc(cfg.dir === "idr" ? p.i : p.t)}</div>
+            <div class="mini-note" style="margin-top:10px;opacity:.85">${esc(cfg.dir === "idr" ? (p.it || "") : (p.tt || ""))}</div>
+            <div style="margin-top:8px"><button class="icon-btn" data-act="speak" data-code="${cfg.dir === "idr" ? "id-ID" : "tr-TR"}" data-text="${esc(cfg.dir === "idr" ? p.i : p.t)}">🔊</button></div>` : `
+            <div class="big">${esc(p.a)}</div>`}
             <div class="mini-note" style="margin-top:12px;opacity:.8">اضغط البطاقة لرؤية الجواب</div>
           </div>
           <div class="flip-face flip-back">
+            ${(cfg.dir === "idr" || cfg.dir === "trr") ? `
+            <div class="big">${esc(p.a)}</div>
+            <div class="mini-note" style="margin-top:10px">🇮🇩 ${esc(p.i)}<br>🇹🇷 ${esc(p.t)}</div>` : `
             <div class="lang-block id" style="margin:4px 0"><div class="ltext">${esc(p.i)}</div><div class="ltrans">${esc(p.it || "")}</div></div>
             <div class="lang-block tr" style="margin:4px 0"><div class="ltext">${esc(p.t)}</div><div class="ltrans">${esc(p.tt || "")}</div></div>
             <div>
               <button class="icon-btn" data-act="speak" data-code="id-ID" data-text="${esc(p.i)}">🇮🇩 🔊</button>
               <button class="icon-btn" data-act="speak" data-code="tr-TR" data-text="${esc(p.t)}">🇹🇷 🔊</button>
-            </div>
+            </div>`}
           </div>
         </div>
       </div>
@@ -172,15 +187,16 @@
     const q = run.quiz;
     if (q.idx >= q.list.length) { renderQuizEnd(); return; }
     const p = q.list[q.idx];
-    const correct = q.dir === "id" ? p.i : p.t;
-    const others = allPhrases().filter(x => x.id !== p.id && (q.dir === "id" ? x.i : x.t) !== correct)
-      .sort(() => Math.random() - .5).slice(0, 3).map(x => q.dir === "id" ? x.i : x.t);
+    const fwd = q.dir === "id" || q.dir === "tr";
+    const correct = fwd ? (q.dir === "id" ? p.i : p.t) : p.a;
+    const others = allPhrases().filter(x => x.id !== p.id && (fwd ? (q.dir === "id" ? x.i : x.t) : x.a) !== correct)
+      .sort(() => Math.random() - .5).slice(0, 3).map(x => fwd ? (q.dir === "id" ? x.i : x.t) : x.a);
     const opts = [correct, ...others].sort(() => Math.random() - .5);
     $("#cardsArea").innerHTML = `
     <div class="box">
       <div class="tr-progress">${q.list.map((_, k) => `<i class="${k < q.idx ? "done" : k === q.idx ? "now" : ""}"></i>`).join("")}</div>
-      <div class="tr-prompt" style="text-align:center;font-size:1.2rem;font-weight:800;margin:10px 0">${esc(p.a)}</div>
-      <p class="mini-note" style="text-align:center">ما مقولها بـ${q.dir === "id" ? "الإندونيسية 🇮🇩" : "التركية 🇹🇷"}؟</p>
+      <div class="tr-prompt ltr" style="text-align:center;font-size:1.2rem;font-weight:800;margin:10px 0">${esc(fwd ? p.a : (q.dir === "idr" ? p.i : p.t))}</div>
+      <p class="mini-note" style="text-align:center">${fwd ? `ما مقولها بـ${q.dir === "id" ? "الإندونيسية 🇮🇩" : "التركية 🇹🇷"}؟` : "ما معناها بالعربية؟ (استرجاع عكسي)"}</p>
       <div id="quizOpts">
         ${opts.map(o => `<button class="quiz-opt" data-ok="${o === correct ? "1" : "0"}">${esc(o)}</button>`).join("")}
       </div>
@@ -192,7 +208,7 @@
       const ok = b.dataset.ok === "1";
       App.track && App.track("quiz");
       if (!ok) App.addMistake && App.addMistake({ q: p.a, correct, lang: q.dir, source: "📝 اختبار", why: p.n ? "تلميح: " + p.n : "" });
-      if (ok) { q.score++; App.langTrack && App.langTrack(q.dir, p.id); }
+      if (ok) { q.score++; App.langTrack && App.langTrack((q.dir || "id").slice(0, 2), p.id); }
       document.querySelectorAll(".quiz-opt").forEach(x => {
         if (x.dataset.ok === "1") x.classList.add("right");
         else if (x === b) x.classList.add("wrong");

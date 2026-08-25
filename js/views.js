@@ -34,6 +34,11 @@
     <div class="box"><h3>${esc(s.title)}</h3><p style="color:var(--sub)">${esc(s.sub || "")}</p>
       ${s.context ? `<div class="callout info" style="margin-top:8px"><b>الموقف:</b> ${esc(s.context)}</div>` : ""}</div>
 
+    <div class="chips" id="dlgToggles">
+      <button class="chip" id="tgHideAr" title="اختبر فهمك بلا ترجمة">🙈 إخفاء العربية</button>
+      <button class="chip" id="tgHideTl" title="استمع فقط">🎧 إخفاء النص الهدف</button>
+      <button class="chip" id="tgSlow">🐢 صوت بطيء دائم</button>
+    </div>
     <div class="box"><h3>📜 الحوار الكامل</h3>
       <div class="dlg">
         ${(s.turns || []).map((t, idx) => `
@@ -330,3 +335,16 @@ App.Views.plan = function () {
     </ul>
   </div>`;
 };
+
+/* ===== أزرار الحوار: إخفاء الترجمة/النص + الصوت البطيء (§18) ===== */
+(function () {
+  document.addEventListener("click", e => {
+    const t = e.target.closest("#tgHideAr, #tgHideTl, #tgSlow");
+    if (!t) return;
+    t.classList.toggle("on");
+    const on = t.classList.contains("on");
+    if (t.id === "tgHideAr") document.body.classList.toggle("hide-ar", on);
+    if (t.id === "tgHideTl") document.body.classList.toggle("hide-tl", on);
+    if (t.id === "tgSlow") { App.slowMode = on; App.toast(on ? "🐢 الصوت البطيء مفعّل لكل الجمل" : "الصوت العادي"); }
+  });
+})();

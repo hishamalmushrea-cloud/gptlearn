@@ -108,3 +108,27 @@ qs:[
 {q:"ما الاتجاهات التي أعطاها العم؟", opts:["مستقيمًا ثم يسارًا","يمينًا ثم يمينًا","مستقيمًا حتى النهاية"], ok:0},
 {q:"ماذا فعل السائح في اليوم التالي؟", opts:["غادر المدينة","اشتكى من العم","عاد بهدية وصار يلقي التحية يوميًا"], ok:2}
 ]});
+
+DB.stories.push({
+id:"sto-7", lang:"id", level:"B1", title:"مشكلة مع المورد (Masalah Pemasok)",
+intro:"قصة أعمال بمستوى B1 — سوء فهم يتحول لعلاقة أقوى.",
+text:"Pak Bowo menelepon pemasoknya sore itu. \"Ibu Sari, pesanan kemarin kok beda warnanya?\" Di ujung telepon, Ibu Sari terdiam sejenak. \"Maaf Pak, tim gudang salah ambil. Saya ganti hari ini juga.\" Pak Bowo menarik napas. Pelanggannya menunggu, tapi dia tetap tenang. \"Baik Ibu, saya percaya. Tapi tolong, besok ada surat jalan yang benar.\" Keesokan harinya, barang yang benar datang lebih pagi dari janji. Di dalamnya ada kartu kecil: \"Terima kasih atas pengertiannya. Diskon 5% untuk pesanan berikutnya.\" Pak Bowo tersenyum. Dia mengerti: kesalahan bisa terjadi, tapi cara memperbaikinya yang menentukan hubungan. Bulan depan, dia justru menambah jumlah pesanannya.",
+textAr:"اتصل بوفو بمورّدته عصر ذلك اليوم: «سيدة ساري، طلب الأمس لماذا ألوانه مختلفة؟» صمتت ساري لحظة ثم قالت: «عذرًا، فريق المستودع أخطأ في الالتقاط — أستبدله اليوم نفسه.» تنفّس بوفو: زبونه ينتظر لكنه بقي هادئًا: «حسنًا أثق بكِ، لكن غدًا أريد سند شحن صحيحًا.» في اليوم التالي وصلت البضاعة الصحيحة أبكر من الموعد، وفي داخلها بطاقة صغيرة: «شكرًا لتفهمك — خصم 5% لطلبك القادم.» ابتسم بوفو: الأخطاء تحدث، لكن طريقة إصلاحها هي التي تحدد العلاقة. في الشهر التالي زاد طلبه بدل أن ينقص.",
+vocab:[["يتصل","menelepon","منيليبون"],["موردة","pemasok","پيماسوق"],["لحظة صمت","terdiam sejenak","ترديم سيجانق"],["يستبدل","mengganti","منݢانتي"],["سند الشحن","surat jalan","صورات چالن"],["بدلًا من ذلك","sebaliknya","صبالقنيا"]],
+qs:[
+{q:"كيف ردّ بوفو على خطأ الموردة؟", opts:["بغضب وتهديد","بهدوء مع اشتراط تصحيح موثق","بإلغاء التعامل"], ok:1},
+{q:"ماذا فعلت الموردة في اليوم التالي؟", opts:["تجاهلت الطلب","أرسلت البضاعة أبكر مع بطاقة وخصم","طلبت اعتذارًا"], ok:1},
+{q:"ما نتيجة معالجة الأزمة بإحسان؟", opts:["قطع العلاقة","زيادة كمية الطلب الشهر التالي","خسارة الزبون"], ok:1}
+]});
+
+DB.stories.push({
+id:"sto-8", lang:"tr", level:"B1", title:"جمعة في البازار (Bazarda Cuma)",
+intro:"يوم الجمعة في بازار أنطاليا — ضيافة تفتح صفقة.",
+text:"Cuma sabahı pazar kalabalıktı. Hasan Usta tezgâhını yeni dizmişti ki, Orta Doğu’dan bir aile yaklaştı. \"Hoş geldiniz! Bakın, taze incirler bugün geldi.\" Ailenin babası fiyat sordu, Hasan Usta rakam söyledi. Adam başını salladı ama ikna olmamıştı. O sırna ezan okundu. \"Buyurun,\" dedi Hasan Usta, \"namaz vakti. Dükkânım açık kalır, siz gidin rahatça gelin.\" Aile şaşırdı: \"Kapatmayacak mısınız?\" \"Müşterim kaybolmaz, güvendiğim insanlar geri döner.\" Aile namazdan döndüğünde tezgâh duruyordu, incirlerin en güzeli ayrıca poşetlenmişti. Baba gülümsedi: \"Bizi beklediniz demek?\" \"Ağırlamak bir beyefendi görevidir.\" O gün aile yalnız incir almadı; bir haftalık meyve ihtiyacını da Hasan Usta’dan karşıladı. Ve her cuma aynı tezgâh uğrak yeri oldu.",
+textAr:"صباح الجمعة كان البازار مزدحمًا. رتب حسن أوستا طاولته للتو حين اقتربت عائلة من الشرق الأوسط. «أهلًا بكم! تفضلوا، تين طازج وصل اليوم.» سأل الأب عن السعر فذكر حسن رقمًا، فأومأ الرجل غير مقتنع. عندها أذّن المؤذن. قال حسن: «تفضلوا، وقت الصلاة — دكاني يبقى مفتوحًا، اذهبوا وعودوا براحتكم.» تعجبت العائلة: «لن تغلق؟» «زبوني لا يضيع، من أثق به يعود.» حين عادت العائلة من الصلاة كانت الطاولة قائمة، وأجمل التين معبأ على حدة. ابتسم الأب: «انتظرتنا إذن؟» «الضيافة واجب أصيل.» ذلك اليوم لم تشترِ العائلة تينًا فقط، بل قالت حاجتها من الفاكهة لأسبوع كامل من حسن، وصارت كل جمعة مزارًا ثابتًا لطاولته.",
+vocab:[["تين طازج","taze incir","تازه إنجير"],["أذّن المؤذن","ezan okundu","إيزان أوكوندو"],["يبقى مفتوحًا","açık kalır","آتشيق قالير"],["معبأ على حدة","ayrıca poşetlenmiş","آيرجا پوشيتلينميش"],["أومأ برأسه","başını salladı","باشيني صالادي"],["مزار/محطة","ugrak yeri","اوغراك يري"]],
+qs:[
+{q:"ماذا فعل حسن عند الأذان؟", opts:["أغلق وذهب","أبقى الدكان مفتوحًا وطمأنهم","طلب منهم البقاء"], ok:1},
+{q:"ماذا فعلت العائلة بعد الصلاة؟", opts:["لم تعد","عادت واشترت حاجتها لأسبوع","اشتكت من الانتظار"], ok:1},
+{q:"الدرس التجاري للقصة:", opts:["الضغط يبيع","الثقة والضيافة تبنيان زبونًا دائمًا","الأسعار هي كل شيء"], ok:1}
+]});
