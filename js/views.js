@@ -6,19 +6,23 @@
 
   /* ============ المواقف الكاملة ============ */
   App.Views.situations = function () {
-    const kinds = { situation: "🎬 موقف", bargain: "🤝 مساومة", complaint: "😤 شكوى", wholesale: "📦 جملة", message: "📱 مراسلة" };
+    const kinds = { situation: "🎬 موقف", bargain: "🤝 مساومة", complaint: "😤 شكوى", wholesale: "📦 جملة", message: "📱 مراسلة", daily: "🌅 حياة يومية" };
+    const sales = DB.situations.filter(s => s.kind !== "daily");
+    const daily = DB.situations.filter(s => s.kind === "daily");
+    const card = s => `
+      <a class="chapter-card" href="#/situation/${s.id}">
+        <h3>${esc(s.title)}</h3><p>${esc(s.sub || "")}</p>
+        <span class="tag">${kinds[s.kind] || "🎬"}</span>
+        <span class="tag">${(s.turns || []).length} جولة</span>
+        <span class="tag">${(s.vocab || []).length} كلمة</span>
+      </a>`;
     $("#view").innerHTML = `
     <div class="section-title">🎬 المواقف الكاملة <span class="line"></span></div>
     <div class="callout tip">منهج كل موقف: <b>الموقف ← الحوار الكامل ← الكلمات المهمة ← القاعدة ← النطق ← لماذا هذه العبارة؟ ← نسخة أكثر رسمية وأكثر عفوية ← إعادة تمثيل الحوار</b> (أنت البائع أو الزبون).</div>
-    <div class="grid-cards">
-      ${DB.situations.map(s => `
-        <a class="chapter-card" href="#/situation/${s.id}">
-          <h3>${esc(s.title)}</h3><p>${esc(s.sub || "")}</p>
-          <span class="tag">${kinds[s.kind] || "🎬"}</span>
-          <span class="tag">${(s.turns || []).length} جولة</span>
-          <span class="tag">${(s.vocab || []).length} كلمة</span>
-        </a>`).join("")}
-    </div>`;
+    <div class="section-title">🛍️ مواقف البيع والسوق <span class="line"></span></div>
+    <div class="grid-cards">${sales.map(card).join("")}</div>
+    <div class="section-title">🌅 مواقف الحياة اليومية (خارج المحل) <span class="line"></span></div>
+    <div class="grid-cards">${daily.map(card).join("")}</div>`;
   };
 
   App.Views.situation = function (id) {
@@ -184,3 +188,142 @@
     });
   };
 })();
+
+/* ============ اختبار تحديد المستوى ============ */
+(function () {
+  let run = null;
+
+  App.Views.placement = function () {
+    if (run && !run.done) { renderQ(); return; }
+    App.$("#view").innerHTML = `
+    <div class="section-title">🎯 اختبار تحديد المستوى <span class="line"></span></div>
+    <div class="callout tip">12 سؤالًا سريعًا (عربي ← لغة الهدف) من أسهل جمل البنك إلى أصعبه. في النهاية: مستواك التقريبي وخريطة بداية مخصصة. هذا تقييم استرشادي صادق — لا رقم سحري.</div>
+    <div class="box" style="text-align:center">
+      <h3>اختبر بأي لغة؟</h3>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">
+        <button class="btn primary" id="plcId">🇮🇩 الإندونيسية</button>
+        <button class="btn primary" id="plcTr">🇹🇷 التركية</button>
+      </div>
+    </div>
+    <div id="plcArea"></div>`;
+    document.getElementById("plcId").addEventListener("click", () => start("id"));
+    document.getElementById("plcTr").addEventListener("click", () => start("tr"));
+  };
+
+  function start(lang) {
+    const bank = App.bankSorted();
+    const bands = [[0, 4], [40, 4], [120, 4]]; // سهل/متوسط/متقدم حسب الأولوية
+    let qs = [];
+    bands.forEach(([from, n]) => {
+      const pool = bank.slice(from, from + 40).sort(() => Math.random() - .5).slice(0, n);
+      qs = qs.concat(pool);
+    });
+    run = { lang, qs, idx: 0, score: 0, answered: false, done: false };
+    renderQ();
+  }
+
+  function renderQ() {
+    const q = run.qs[run.idx];
+    if (!q || run.idx >= run.qs.length) { renderResult(); return; }
+    const correct = run.lang === "id" ? q.i : q.t;
+    const others = App.allPhrases().filter(x => x.id !== q.id && (run.lang === "id" ? x.i : x.t) !== correct)
+      .sort(() => Math.random() - .5).slice(0, 3).map(x => run.lang === "id" ? x.i : x.t);
+    const opts = [correct, ...others].sort(() => Math.random() - .5);
+    App.$("#plcArea").innerHTML = `
+    <div class="box">
+      <div class="tr-progress">${run.qs.map((_, k) => `<i class="${k < run.idx ? "done" : k === run.idx ? "now" : ""}"></i>`).join("")}</div>
+      <div class="tr-prompt" style="text-align:center;font-size:1.15rem;font-weight:800;margin:8px 0">${App.esc(q.a)}</div>
+      <div id="plcOpts">${opts.map(o => `<button class="quiz-opt" data-ok="${o === correct ? "1" : "0"}">${App.esc(o)}</button>`).join("")}</div>
+      <div id="plcFb"></div>
+    </div>`;
+    document.getElementById("plcOpts").addEventListener("click", e => {
+      const b = e.target.closest(".quiz-opt"); if (!b || run.answered) return;
+      run.answered = true;
+      const ok = b.dataset.ok === "1";
+      if (ok) run.score++;
+      document.querySelectorAll("#plcOpts .quiz-opt").forEach(x => {
+        if (x.dataset.ok === "1") x.classList.add("right"); else if (x === b) x.classList.add("wrong");
+      });
+      document.getElementById("plcFb").innerHTML = `<div style="text-align:center;margin-top:10px"><button class="btn primary sm" id="plcNext">${run.idx + 1 < run.qs.length ? "التالي ←" : "النتيجة 🏁"}</button></div>`;
+      document.getElementById("plcNext").addEventListener("click", () => { run.idx++; run.answered = false; renderQ(); });
+    });
+  }
+
+  function renderResult() {
+    run.done = true;
+    const s = run.score, map = {
+      beginner: { title: "🌱 مبتدئ — ابدأ من الأساس", links: [["#/basics", "🔤 الأساسيات والنطق"], ["#/chapter/intro", "🙋 فصل الضمائر والتعريف"], ["#/cards", "🃏 احفظ «أهم 50» بالبطاقات"], ["#/situation/dly-smalltalk", "🎬 أول حوار: دردشة الجيران"]], tip: "لا تقفز إلى قسم البيع الآن — أسبوعان هنا يجعلان كل ما بعده أسهل بعشر مرات." },
+      elementary: { title: "📗 ما بعد المبتدئ — عرّف نفسك واشترِ", links: [["#/chapter/questions", "❓ أدوات الأسئلة الذهبية"], ["#/chapter/verbs", "⚡ الأفعال الذهبية"], ["#/chapter/themes", "📚 المفردات الموضوعية"], ["#/cards", "🃏 بطاقات «أهم 100»"], ["#/situation/dly-resto", "🎬 حوار المطعم"]], tip: "أنت جاهز لحوارات الحياة اليومية القصيرة — اثنان أسبوعيًا مع بطاقات يومية." },
+      intermediate: { title: "📘 متوسط — سوق حقيقي يحتاجك", links: [["#/sales", "🛍️ قسم البيع كاملًا (ابدأ بالترحيب ثم الأسعار)"], ["#/situations", "🎬 حوارات المساومة والشكاوى"], ["#/train", "🎭 التدريب التفاعلي: أنا البائع"], ["#/compare", "🔁 المقارنة الثلاثية"]], tip: "ركز على المساومة والشكاوى — أعلى ما يرفع مستوى بائع حقيقي." },
+      advanced: { title: "📙 متقدم — صقل واحتراف", links: [["#/train", "🎭 السيناريوهات الأصعب (الزبون الغاضب، الجملة)"], ["#/chapter/wholesale", "📦 الجملة والتفاوض مع الموردين"], ["#/chapter/messaging", "📱 واتساب الاحترافي"], ["#/compare", "🔁 دقق طبيعية كل جملة (30 تحليلًا)"]], tip: "أنت شبه جاهز للسوق — متبقيك الصقل: التلقائية عبر التدريب والبطاقات المتقدمة." }
+    };
+    const band = s <= 4 ? map.beginner : s <= 8 ? map.elementary : s <= 10 ? map.intermediate : map.advanced;
+    App.$("#plcArea").innerHTML = `
+    <div class="box" style="text-align:center;padding:30px">
+      <div style="font-size:2.6rem">🎯</div>
+      <h3>${band.title}</h3>
+      <p style="color:var(--sub)">أجبت بشكل صحيح عن ${s} من 12 بـ${run.lang === "id" ? "الإندونيسية" : "التركية"}</p>
+      <div class="callout tip" style="text-align:right">${band.tip}</div>
+      <div style="text-align:right;margin-top:10px">${band.links.map(([h, t]) => `<p><a href="${h}">← ${t}</a></p>`).join("")}</div>
+      <div style="margin-top:14px"><button class="btn ghost sm" onclick="location.hash='#/placement';location.reload()">🔁 أعد الاختبار</button></div>
+    </div>`;
+  }
+})();
+
+/* ============ خطة 30 يومًا ============ */
+App.Views.plan = function () {
+  const weeks = [
+    { t: "الأسبوع 1 — الأساس والنجاة (الأساسيات)", days: [
+      ["اليوم 1", "#/basics", "نطق اللغة الأولى: جدول الحروف + مصائد العرب"],
+      ["اليوم 2", "#/basics", "أعد قراءة النطق + اسمع كل عبارات النجاة (🔊)"],
+      ["اليوم 3", "#/cards", "بطاقات «أهم 50» — 15 بطاقة يوميًا"],
+      ["اليوم 4", "#/chapter/intro", "فصل الضمائر والتعريف بالنفس"],
+      ["اليوم 5", "#/numbers", "الأرقام 1–100 + قراءة الأسعار"],
+      ["اليوم 6", "#/cards", "أكمل «أهم 50» + اختبار سريع"],
+      ["اليوم 7", "#/situation/dly-smalltalk", "أول حوار: دردشة الجيران + إعادة تمثيله بدورك"]] },
+    { t: "الأسبوع 2 — بناء الجمل والسؤال", days: [
+      ["اليوم 8", "#/chapter/questions", "أدوات الأسئلة الذهبية"],
+      ["اليوم 9", "#/chapter/verbs", "الأفعال الذهبية + جدول التصريف التركي"],
+      ["اليوم 10", "#/cards", "بطاقات «أهم 100»"],
+      ["اليوم 11", "#/situation/dly-resto", "حوار المطعم + تمثيل"],
+      ["اليوم 12", "#/chapter/time", "الوقت والأيام والساعة"],
+      ["اليوم 13", "#/situation/dly-directions", "حوار السؤال عن الطريق + تمثيل"],
+      ["اليوم 14", "#/cards", "اختبار شامل للأسبوعين"]] },
+    { t: "الأسبوع 3 — دخول السوق (قسم البيع)", days: [
+      ["اليوم 15", "#/chapter/attract", "جذب الانتباه"],
+      ["اليوم 16", "#/chapter/welcome", "الترحيب بكل أنواع الزبائن"],
+      ["اليوم 17", "#/chapter/address", "المخاطبة حسب الجنس والعمر"],
+      ["اليوم 18", "#/chapter/products", "عرض المنتجات"],
+      ["اليوم 19", "#/chapter/needs", "معرفة الاحتياج"],
+      ["اليوم 20", "#/chapter/prices", "الأسعار + إعادة فصل الأرقام"],
+      ["اليوم 21", "#/situation/sit-shop1", "حوار محل الملابس كاملًا + تمثيل"]] },
+    { t: "الأسبوع 4 — المساومة والاحتراف", days: [
+      ["اليوم 22", "#/chapter/bargain", "المساومة + سلّم التنازل"],
+      ["اليوم 23", "#/situation/sit-bargain-id", "تمثيل: مساومة جاكرتا (أنت البائع)"],
+      ["اليوم 24", "#/situation/sit-bargain-tr", "تمثيل: مساومة إسطنبول (أنت الزبون)"],
+      ["اليوم 25", "#/chapter/reject", "التعامل مع الرفض"],
+      ["اليوم 26", "#/chapter/complaints", "الشكاوى + حوار الاستبدال"],
+      ["اليوم 27", "#/chapter/persuade", "الإقناع ومتى تتوقف + الواتساب"],
+      ["اليوم 28", "#/train", "سيناريوهان تفاعليان"],
+      ["اليوم 29", "#/placement", "أعد اختبار المستوى — قارن نفسك"],
+      ["اليوم 30", "#/sales", "جولة أخيرة على كل الفصول + 🎉 أنت جاهز للسوق"]] }
+  ];
+  App.$("#view").innerHTML = `
+  <div class="section-title">🗓️ خطة 30 يومًا — من الصفر إلى أول بيع <span class="line"></span></div>
+  <div class="callout tip"><b>20–30 دقيقة يوميًا فقط.</b> القاعدة: يوم قراءة + يوم تدريب بالبطاقات + كل أسبوع حوار تُمثّله بنفسك. عند نهاية الشهر ستكون أتممت «أهم 100 جملة» وثلاثة حوارات كاملة تمثيلًا — وهذا يعني أول حوار حقيقي بمحل حقيقي بإذن الله.</div>
+  ${weeks.map(w => `
+    <div class="box"><h3>${w.t}</h3>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>اليوم</th><th>ماذا تفعل</th><th></th></tr></thead>
+        <tbody>${w.days.map(d => `<tr><td><b>${d[0]}</b></td><td><span>${d[2]}</span></td><td><a class="btn ghost sm" href="${d[1]}">اذهب ←</a></td></tr>`).join("")}</tbody>
+      </table></div>
+    </div>`).join("")}
+  <div class="box"><h3>💡 قواعد ذهبية للخطة</h3>
+    <ul>
+      <li>لا تنتقل لليوم التالي قبل «أعرفها» على بطاقات اليوم السابق.</li>
+      <li>انطق بصوت مسموع دائمًا — الحبال الصوتية تتدرب كالعضلات.</li>
+      <li>اختر لغة واحدة (🇮🇩 أو 🇹🇷) في الشهر الأول — الثانية في الشهر الثاني أسرع بمرتين.</li>
+      <li>استخدم زر 🔊 في كل عبارة — تقليد النبرة أهم من تقليد الكلمات.</li>
+    </ul>
+  </div>`;
+};

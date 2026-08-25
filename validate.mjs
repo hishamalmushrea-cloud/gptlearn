@@ -2,7 +2,7 @@ import fs from 'fs';
 import vm from 'vm';
 const sandbox = {}; sandbox.window = sandbox; // window = global كما في المتصفح
 vm.createContext(sandbox);
-const files = ['data/core/basics.js','data/core/analyses.js','data/sales/part1.js','data/sales/part2.js','data/sales/part3.js','data/sales/part4.js','data/sales/part5.js','data/sales/part6.js','data/sales/part7.js','data/sales/situations.js','data/sales/culture.js','data/train/trainers.js'];
+const files = ['data/core/basics.js','data/core/academy1.js','data/core/academy2.js','data/core/analyses.js','data/sales/part1.js','data/sales/part2.js','data/sales/part3.js','data/sales/part4.js','data/sales/part5.js','data/sales/part6.js','data/sales/part7.js','data/sales/situations.js','data/sales/culture.js','data/daily/dailySituations.js','data/train/trainers.js'];
 for (const f of files) vm.runInContext(fs.readFileSync(f,'utf8'), sandbox, {filename:f});
 const DB = sandbox.window.DB;
 let phrases = 0, issues = [];

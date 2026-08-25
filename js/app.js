@@ -156,7 +156,10 @@ const App = (() => {
       <div class="stat"><b>${learned.size}</b><span>جملة أنهيتها ✓</span></div>
     </div>
     <div class="grid-cards">
-      <a class="module-card hi" href="#/sales"><span class="cnt">الأهم</span><div class="ic">🛍️</div><h3>البيع والشراء والتعامل مع الزبائن</h3><p>${DB.chapters.length} فصلًا من دخول الزبون حتى ما بعد البيع: جذب، ترحيب، عرض، إقناع، أسعار، مساومة، شكاوى، جملة، واتساب…</p></a>
+      <a class="module-card hi" href="#/sales"><span class="cnt">الأهم</span><div class="ic">🛍️</div><h3>البيع والشراء والتعامل مع الزبائن</h3><p>${DB.chapters.filter(c => (c.group || "sales") === "sales").length} فصلًا من دخول الزبون حتى ما بعد البيع: جذب، ترحيب، عرض، إقناع، أسعار، مساومة، شكاوى، جملة، واتساب…</p></a>
+      <a class="module-card" href="#/academy"><div class="ic">🎓</div><h3>المنهج العام (الأكاديمية)</h3><p>الضمائر، الأسئلة، الأفعال الذهبية، الوقت، المشاعر، والمفردات الموضوعية + حوارات الحياة اليومية خارج المحل.</p></a>
+      <a class="module-card" href="#/placement"><div class="ic">🎯</div><h3>اختبار تحديد المستوى</h3><p>12 سؤالًا سريعًا تخبرك من أين تبدأ بالضبط — مع خريطة بداية مخصصة لك.</p></a>
+      <a class="module-card" href="#/plan"><div class="ic">🗓️</div><h3>خطة 30 يومًا</h3><p>برنامج يومي 20–30 دقيقة من الصفر إلى أول حوار بيع حقيقي — مرتب حسب فصول التطبيق.</p></a>
       <a class="module-card" href="#/situations"><div class="ic">🎬</div><h3>المواقف الكاملة</h3><p>موقف ← حوار كامل ← كلمات مهمة ← قواعد ← لماذا هذه العبارة ← نسخة رسمية وعفوية ← إعادة تمثيل.</p></a>
       <a class="module-card" href="#/bank"><div class="ic">⭐</div><h3>بنك الجمل الجاهزة</h3><p>أهم ${Math.min(50, total)} ← 100 ← 250 ← 500 ← 1000 جملة، مرتبة بالأولوية الحقيقية للسوق.</p></a>
       <a class="module-card" href="#/compare"><div class="ic">🔁</div><h3>المقارنة الثلاثية</h3><p>🇸🇦 كيف أقولها كعربي؟ ثم 🇮🇩 و🇹🇷: الترجمة الطبيعية، الحرفية، الرسمية، ومتى تستخدم كل واحدة.</p></a>
@@ -172,6 +175,7 @@ const App = (() => {
 
   /* ---------- صفحة قسم البيع ---------- */
   Views.sales = function () {
+    const chapters = DB.chapters.filter(c => (c.group || "sales") === "sales");
     const view = `
     <div class="hero" style="background:linear-gradient(135deg,#7c2d12,#c2410c)">
       <h1>🛍️ البيع والشراء والتعامل مع الزبائن</h1>
@@ -179,7 +183,7 @@ const App = (() => {
     </div>
     <div class="section-title">📚 الفصول <span class="line"></span></div>
     <div class="grid-cards">
-      ${DB.chapters.map(c => `
+      ${chapters.map(c => `
         <a class="chapter-card" href="#/chapter/${c.id}">
           <h3>${c.icon || "📄"} ${esc(c.title)}</h3>
           <p>${esc(c.sub || "")}</p>
@@ -189,6 +193,50 @@ const App = (() => {
         </a>`).join("")}
     </div>`;
     $("#view").innerHTML = view;
+  };
+
+  /* ---------- صفحة المنهج العام (الأكاديمية) ---------- */
+  Views.academy = function () {
+    const chapters = DB.chapters.filter(c => c.group === "academy");
+    const bank = bankSorted();
+    $("#view").innerHTML = `
+    <div class="hero">
+      <h1>🎓 المنهج العام — أكاديمية الإندونيسية والتركية</h1>
+      <p>مسارك الأكاديمي الكامل خارج المحل: الضمائر والتعريف، أدوات الأسئلة، الأفعال الذهبية، الوقت، المشاعر، والمفردات الموضوعية الكبرى — ثم طبّقها في حوارات الحياة اليومية (مطعم، مواصلات، فندق، صيدلية، اتجاهات، تعارف، هاتف).</p>
+      <div class="cta">
+        <a class="btn primary" href="#/placement">🎯 اختبر مستواك الآن</a>
+        <a class="btn light" href="#/plan">🗓️ خطة 30 يومًا</a>
+      </div>
+    </div>
+    <div class="section-title">📚 فصول المنهج <span class="line"></span></div>
+    <div class="grid-cards">
+      ${chapters.map(c => `
+        <a class="chapter-card" href="#/chapter/${c.id}">
+          <h3>${c.icon || "📄"} ${esc(c.title)}</h3>
+          <p>${esc(c.sub || "")}</p>
+          <span class="tag">${(c.phrases || []).length} عبارة</span>
+          ${(c.tables || []).length ? ` <span class="tag">${c.tables.length} جدول</span>` : ""}
+        </a>`).join("")}
+      <a class="chapter-card" href="#/basics"><h3>🔤 الأساسيات والنطق</h3><p>الحروف والنطق للمتحدث العربي + عبارات النجاة.</p></a>
+      <a class="chapter-card" href="#/numbers"><h3>🔢 الأرقام والأسعار</h3><p>قراءة الأسعار كما يقرؤها الباعة فعلًا.</p></a>
+    </div>
+    <div class="section-title">🎬 حوارات الحياة اليومية <span class="line"></span></div>
+    <div class="grid-cards">
+      ${DB.situations.filter(s => s.kind === "daily").map(s => `
+        <a class="chapter-card" href="#/situation/${s.id}">
+          <h3>${esc(s.title)}</h3><p>${esc(s.sub || "")}</p>
+          <span class="tag">${(s.turns || []).length} جولة</span>
+        </a>`).join("")}
+    </div>
+    <div class="box">
+      <h3>🧭 أين أنت الآن؟ (توجيه سريع)</h3>
+      <ul>
+        <li><b>مبتدئ تمامًا:</b> ابدأ بـ<b>الأساسيات والنطق</b> ← فصل <b>الضمائر والتعريف</b> ← <b>عبارات النجاة</b> ← بطاقات «أهم 50».</li>
+        <li><b>تعرف الأساسيات:</b> فصول <b>الأسئلة والأفعال الذهبية</b> + حواران يوميان أسبوعيًا + بطاقات 100.</li>
+        <li><b>تستطيع التحادث:</b> ادخل <a href="#/sales">🛍️ قسم البيع</a> كاملًا + <a href="#/train">التدريب التفاعلي</a> + المقارنة الثلاثية.</li>
+      </ul>
+      <p class="mini-note">بنك الجمل الحالي يضم ${bank.length} جملة مرتبة بالأولوية — والبنية تتوسع لـ1000+.</p>
+    </div>`;
   };
 
   /* ---------- صفحة فصل ---------- */
@@ -301,7 +349,8 @@ const App = (() => {
     <div class="box">
       <h3>🗺️ خريطة الاستخدام المقترحة</h3>
       <ol>
-        <li>ابدأ بـ<b>الأساسيات والنطق</b> إن كنت مبتدئًا تمامًا.</li>
+        <li>غير متأكد من أين تبدأ؟ <a href="#/placement">🎯 اختبر مستواك</a> ثم اتبع <a href="#/plan">🗓️ خطة 30 يومًا</a>.</li>
+        <li>ابدأ بـ<b><a href="#/academy">المنهج العام</a></b> (ضمائر، أسئلة، أفعال، مفردات) إن كنت مبتدئًا تمامًا.</li>
         <li>ادخل <b>قسم البيع</b> فصلًا فصلًا — اقرأ العبارة، اسمعها، افهم «لماذا هي طبيعية».</li>
         <li>افتح <b>المواقف الكاملة</b> واقرأ الحوار كاملًا مع ملاحظات «لماذا قلنا هذا».</li>
         <li>أعد تمثيل الحوار من صفحة الموقف: <b>أنا البائع / أنا الزبون</b>.</li>
@@ -392,7 +441,8 @@ const App = (() => {
     document.querySelectorAll("#langToggle button").forEach(x => x.classList.toggle("on", x.dataset.lang === settings.lang));
     $("#burger").addEventListener("click", () => { $("#drawer").classList.add("open"); $("#scrim").classList.add("show"); });
     $("#scrim").addEventListener("click", () => { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("show"); });
-    $("#drawerChapters").innerHTML = DB.chapters.map(c => `<a class="sub" href="#/chapter/${c.id}">${c.icon || "📄"} ${esc(c.title)}</a>`).join("");
+    $("#drawerChapters").innerHTML = DB.chapters.filter(c => (c.group || "sales") === "sales").map(c => `<a class="sub" href="#/chapter/${c.id}">${c.icon || "📄"} ${esc(c.title)}</a>`).join("");
+    $("#drawerAcademy").innerHTML = DB.chapters.filter(c => c.group === "academy").map(c => `<a class="sub" href="#/chapter/${c.id}">${c.icon || "📄"} ${esc(c.title)}</a>`).join("");
   }
 
   /* ---------- تشغيل ---------- */
