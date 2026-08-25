@@ -31,12 +31,12 @@ const App = (() => {
   const lvBadge = lv => lv ? `<span class="badge ${LV[lv][1]}">${LV[lv][0]}</span>` : "";
 
   /* النطق عبر متصفحك (يعمل دون إنترنت إذا توفر صوت اللغة في الجهاز) */
-  function speak(text, code) {
+  function speak(text, code, rate) {
     try {
       if (!("speechSynthesis" in window)) { toast("المتصفح لا يدعم النطق — استعن بالنطق المكتوب 📝"); return; }
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = code; u.rate = 0.85;
+      u.lang = code; u.rate = rate || 0.9;
       const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith(code.slice(0, 2)));
       if (v) u.voice = v;
       speechSynthesis.speak(u);
@@ -158,6 +158,9 @@ const App = (() => {
     <div class="grid-cards">
       <a class="module-card hi" href="#/sales"><span class="cnt">الأهم</span><div class="ic">🛍️</div><h3>البيع والشراء والتعامل مع الزبائن</h3><p>${DB.chapters.filter(c => (c.group || "sales") === "sales").length} فصلًا من دخول الزبون حتى ما بعد البيع: جذب، ترحيب، عرض، إقناع، أسعار، مساومة، شكاوى، جملة، واتساب…</p></a>
       <a class="module-card" href="#/academy"><div class="ic">🎓</div><h3>المنهج العام (الأكاديمية)</h3><p>الضمائر، الأسئلة، الأفعال الذهبية، الوقت، المشاعر، والمفردات الموضوعية + حوارات الحياة اليومية خارج المحل.</p></a>
+      <a class="module-card" href="#/survival"><div class="ic">🆘</div><h3>وضع النجاة</h3><p>بلمسة واحدة: مطار، طوارئ، مال، فندق، تاكسي، اتجاهات — الجملة المنقذة فورًا.</p></a>
+      <a class="module-card" href="#/stories"><div class="ic">📖</div><h3>قصص متدرجة</h3><p>اقرأ واسمع بسرعتين واختبر فهمك — قصص أصلية A1/A2 باللغتين.</p></a>
+      <a class="module-card" href="#/progress"><div class="ic">📈</div><h3>تقدمي</h3><p>هدف يومي، سلسلة أيام، مهارات موثقة، وإنجازات صادقة.</p></a>
       <a class="module-card" href="#/placement"><div class="ic">🎯</div><h3>اختبار تحديد المستوى</h3><p>12 سؤالًا سريعًا تخبرك من أين تبدأ بالضبط — مع خريطة بداية مخصصة لك.</p></a>
       <a class="module-card" href="#/plan"><div class="ic">🗓️</div><h3>خطة 30 يومًا</h3><p>برنامج يومي 20–30 دقيقة من الصفر إلى أول حوار بيع حقيقي — مرتب حسب فصول التطبيق.</p></a>
       <a class="module-card" href="#/situations"><div class="ic">🎬</div><h3>المواقف الكاملة</h3><p>موقف ← حوار كامل ← كلمات مهمة ← قواعد ← لماذا هذه العبارة ← نسخة رسمية وعفوية ← إعادة تمثيل.</p></a>
@@ -378,12 +381,12 @@ const App = (() => {
   document.addEventListener("click", e => {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const act = b.dataset.act;
-    if (act === "speak") speak(b.dataset.text, b.dataset.code);
+    if (act === "speak") speak(b.dataset.text, b.dataset.code, b.dataset.rate ? parseFloat(b.dataset.rate) : undefined);
     else if (act === "copy") copyText(b.dataset.text);
     else if (act === "learn") {
       const id = b.dataset.id;
       if (learned.has(id)) { learned.delete(id); toast("أُزيلت من «أنهيتها»"); }
-      else { learned.add(id); toast("أحسنت! سُجّلت كجملة أتممتها ✓"); }
+      else { learned.add(id); toast("أحسنت! سُجّلت كجملة أتممتها ✓"); App.track && App.track("vocab"); }
       saveLearned();
       const card = document.getElementById("pc-" + id);
       if (card) { card.classList.toggle("learned", learned.has(id)); const btn = card.querySelector('[data-act="learn"]'); if (btn) btn.classList.toggle("done", learned.has(id)); }

@@ -116,6 +116,8 @@
       const val = (inp.value || "").trim();
       if (!val) { toast("اكتب ردّك أولًا ✍️"); return; }
       const g = App.Trainer.grade(val, turn, session.lang);
+      App.track && App.track("conversation");
+      if (g <= 1 && turn.model) App.addMistake && App.addMistake({ q: turn.ask, correct: turn.model, why: turn.why, lang: session.lang, source: "🎭 تدريب" });
       session.results.push(g);
       session.lastFb = feedbackHTML(g, turn);
       session.done = true;

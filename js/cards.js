@@ -130,6 +130,7 @@
     const p = run.list[run.idx];
     const b = boxes();
     const cur = b[p.id] || { box: 1, due: 0 };
+    App.track && App.track("cards");
     if (good) cur.box = Math.min(5, cur.box + 1); else { cur.box = 1; run.again.push(p); }
     cur.due = Date.now() + INTERVALS[cur.box] * DAY;
     b[p.id] = cur; saveBoxes(b);
@@ -185,6 +186,8 @@
       const b = e.target.closest(".quiz-opt"); if (!b || q.answered) return;
       q.answered = true;
       const ok = b.dataset.ok === "1";
+      App.track && App.track("quiz");
+      if (!ok) App.addMistake && App.addMistake({ q: p.a, correct, lang: q.dir, source: "📝 اختبار", why: p.n ? "تلميح: " + p.n : "" });
       if (ok) q.score++;
       document.querySelectorAll(".quiz-opt").forEach(x => {
         if (x.dataset.ok === "1") x.classList.add("right");

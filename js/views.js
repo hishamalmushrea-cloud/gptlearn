@@ -240,6 +240,7 @@
       const b = e.target.closest(".quiz-opt"); if (!b || run.answered) return;
       run.answered = true;
       const ok = b.dataset.ok === "1";
+      if (!ok) App.addMistake && App.addMistake({ q: q.a, correct, lang: run.lang, source: "🎯 تحديد مستوى" });
       if (ok) run.score++;
       document.querySelectorAll("#plcOpts .quiz-opt").forEach(x => {
         if (x.dataset.ok === "1") x.classList.add("right"); else if (x === b) x.classList.add("wrong");
