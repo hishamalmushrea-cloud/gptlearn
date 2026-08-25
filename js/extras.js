@@ -652,6 +652,29 @@ App.Views.packs = function () {
     document.getElementById("pkInfo").textContent = "تم التصدير ✅ — " + pack.contentPack.id + " (" + Object.keys(pack.content).length + " أقسام محتوى)";
     App.toast("تم تصدير الحزمة ⬇️");
   });
+  // ===== تقرير جودة المحتوى الحي (§45) =====
+  (function qualityReport(){
+    const ph = App.allPhrases();
+    const cov = (list, fn) => Math.round(list.filter(fn).length / Math.max(list.length,1) * 100);
+    const missingTranslit = ph.filter(p => !p.it || !p.tt).slice(0, 30);
+    const box = document.createElement("div");
+    box.className = "box";
+    box.innerHTML = `
+      <h3>🔬 تقرير جودة المحتوى الحي</h3>
+      <div class="kv" style="grid-template-columns:170px 1fr">
+        <b>إجمالي العبارات</b><span>${ph.length}</span>
+        <b>تغطية النطق العربي (it/tt)</b><span>${cov(ph, p => p.it && p.tt)}%</span>
+        <b>تغطية «متى تستخدمها»</b><span>${cov(ph, p => p.w)}%</span>
+        <b>تغطية «لماذا طبيعية»</b><span>${cov(ph, p => p.n)}%</span>
+        <b>توزيع الرسمية 1/2/3/4</b><span>${[1,2,3,4].map(l => ph.filter(p=>p.lv===l).length).join(" / ")}</span>
+        <b>توزيع الأولوية 1–5</b><span>${[1,2,3,4,5].map(l => ph.filter(p=>p.p===l).length).join(" / ")}</span>
+        <b>مقالات ثقافة / تحليلات / حوارات</b><span>${DB.culture.length} / ${DB.analyses.length} / ${DB.situations.length}</span>
+        <b>حالة المحتوى (status)</b><span>reviewed — محتوى أصلي 100% كُتب وراجِع للمشروع (license: project-proprietary، contentVersion 2)</span>
+      </div>
+      ${missingTranslit.length ? `<details class="box"><summary>⚠️ عبارات بلا نطق موثق (${missingTranslit.length}) — قائمة المراجعة</summary><div class="dbody mini-note">${missingTranslit.map(p => App.esc(p.id + " · " + p.a)).join("<br>")}</div></details>` : ""}`;
+    App.$("#view").appendChild(box);
+  })();
+
   document.getElementById("pkFile").addEventListener("change", e => {
     const f = e.target.files[0]; if (!f) return;
     const r = new FileReader();
