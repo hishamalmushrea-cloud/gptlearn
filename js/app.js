@@ -155,12 +155,14 @@ const App = (() => {
       <div class="stat"><b>${trs}</b><span>سيناريو تدريبي</span></div>
       <div class="stat"><b>${learned.size}</b><span>جملة أنهيتها ✓</span></div>
     </div>
+    <div class="box" id="smartNext" style="border:2px solid var(--brand)"></div>
     <div class="grid-cards">
       <a class="module-card hi" href="#/sales"><span class="cnt">الأهم</span><div class="ic">🛍️</div><h3>البيع والشراء والتعامل مع الزبائن</h3><p>${DB.chapters.filter(c => (c.group || "sales") === "sales").length} فصلًا من دخول الزبون حتى ما بعد البيع: جذب، ترحيب، عرض، إقناع، أسعار، مساومة، شكاوى، جملة، واتساب…</p></a>
       <a class="module-card" href="#/academy"><div class="ic">🎓</div><h3>المنهج العام (الأكاديمية)</h3><p>الضمائر، الأسئلة، الأفعال الذهبية، الوقت، المشاعر، والمفردات الموضوعية + حوارات الحياة اليومية خارج المحل.</p></a>
       <a class="module-card" href="#/survival"><div class="ic">🆘</div><h3>وضع النجاة</h3><p>بلمسة واحدة: مطار، طوارئ، مال، فندق، تاكسي، اتجاهات — الجملة المنقذة فورًا.</p></a>
       <a class="module-card" href="#/stories"><div class="ic">📖</div><h3>قصص متدرجة</h3><p>اقرأ واسمع بسرعتين واختبر فهمك — قصص أصلية A1/A2 باللغتين.</p></a>
       <a class="module-card" href="#/progress"><div class="ic">📈</div><h3>تقدمي</h3><p>هدف يومي، سلسلة أيام، مهارات موثقة، وإنجازات صادقة.</p></a>
+      <a class="module-card" href="#/write"><div class="ic">✍️</div><h3>تمرين الكتابة</h3><p>رتّب الجمل كلمةً كلمة — بناء جمل حقيقي لا مجرد تذكر.</p></a>
       <a class="module-card" href="#/placement"><div class="ic">🎯</div><h3>اختبار تحديد المستوى</h3><p>12 سؤالًا سريعًا تخبرك من أين تبدأ بالضبط — مع خريطة بداية مخصصة لك.</p></a>
       <a class="module-card" href="#/plan"><div class="ic">🗓️</div><h3>خطة 30 يومًا</h3><p>برنامج يومي 20–30 دقيقة من الصفر إلى أول حوار بيع حقيقي — مرتب حسب فصول التطبيق.</p></a>
       <a class="module-card" href="#/situations"><div class="ic">🎬</div><h3>المواقف الكاملة</h3><p>موقف ← حوار كامل ← كلمات مهمة ← قواعد ← لماذا هذه العبارة ← نسخة رسمية وعفوية ← إعادة تمثيل.</p></a>
@@ -174,6 +176,15 @@ const App = (() => {
     </div>
     <div class="footer-note">يعمل التطبيق دون إنترنت بالكامل — التقدم محفوظ في جهازك 💾</div>`;
     $("#view").innerHTML = view;
+    try {
+      const n = App.nextBest();
+      document.getElementById("smartNext").innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="font-size:2rem">${n.icon}</div>
+          <div style="flex:1;min-width:200px"><b>ماذا أتعلم الآن؟</b><p class="mini-note">${n.desc}</p></div>
+          <a class="btn primary sm" href="${n.href}">${n.title} ←</a>
+        </div>`;
+    } catch (e) {}
   };
 
   /* ---------- صفحة قسم البيع ---------- */

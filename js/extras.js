@@ -4,6 +4,42 @@
 (function () {
   const esc = App.esc, $ = App.$, toast = App.toast;
 
+  /* ---------- تقدم كل لغة على حدة (R1) ---------- */
+  function langStore() { return App.store.get("langprog", { id: [], tr: [] }); }
+  App.langTrack = function (lang, id) {
+    if (lang !== "id" && lang !== "tr") return;
+    const lp = langStore();
+    const set = new Set(lp[lang]); set.add(id);
+    lp[lang] = [...set]; App.store.set("langprog", lp);
+  };
+  App.langProgress = function () {
+    const lp = langStore(), total = App.allPhrases().length;
+    return {
+      id: { n: lp.id.length, pct: Math.round(lp.id.length / Math.max(total, 1) * 100) },
+      tr: { n: lp.tr.length, pct: Math.round(lp.tr.length / Math.max(total, 1) * 100) },
+      total
+    };
+  };
+  App.langLevel = function (lang, lvl) {
+    const l = App.store.get("level", {});
+    if (lvl) { l[lang] = { lvl, at: Date.now() }; App.store.set("level", l); }
+    return l[lang] || null;
+  };
+
+  /* ---------- محرك «ماذا أتعلم الآن؟» (R3 — توصية صادقة بقواعد معلنة) ---------- */
+  App.nextBest = function () {
+    const b = App.store.get("leitner", {}), now = Date.now();
+    const due = Object.values(b).filter(x => now >= (x.due || 0)).length;
+    const mis = App.store.get("mistakes", []).length;
+    const total = App.allPhrases().length, doneN = App.learned.size;
+    if (mis >= 5) return { icon: "❌", title: "راجع أخطائك أولًا", desc: mis + " أخطاء متراكمة — المراجعة المبنية على الخطأ أعلى مردود الآن.", href: "#/mistakes" };
+    if (due >= 8) return { icon: "🃏", title: "لديك " + due + " بطاقة مستحقة", desc: "المراجعة المجدولة قبل أي جديد — هكذا يثبت القديم.", href: "#/cards" };
+    if (doneN < 50) return { icon: "⭐", title: "أكمل أهم 50 جملة", desc: "أنجزت " + doneN + " من 50 — عمود الأساس للسوق.", href: "#/bank" };
+    if (due > 0) return { icon: "🃏", title: "بدّد " + due + " بطاقة مستحقة", desc: "ثم افتح تدريبًا جديدًا.", href: "#/cards" };
+    return { icon: "🎭", title: "تدرّب كالبائع", desc: "بطاقاتك منضبطة — الوقت الأمثل لمحادثة تفاعلية.", href: "#/train" };
+  };
+
+
   /* ============ تتبع النشاط والمهارات ============ */
   const KINDS = { vocab: "📚 مفردات", cards: "🃏 مراجعة", quiz: "📝 اختبار", conversation: "🎭 محادثة", listening: "🎧 استماع", reading: "📖 قراءة", test: "🎯 اختبار مستوى" };
   App.track = function (kind, n) {
@@ -74,8 +110,26 @@
       { icon: "🎭", t: "أول تدريب محادثة", ok: !!trainerDone, d: "أنا البائع/أنا الزبون" },
       { icon: "📖", t: "أول قصة مقروءة", ok: !!storiesRead, d: "قصص متدرجة" }
     ];
+    const lp = App.langProgress();
+    const lvI = App.langLevel("id"), lvT = App.langLevel("tr");
     $("#view").innerHTML = `
     <div class="section-title">📈 تقدمي <span class="line"></span></div>
+    <div class="box">
+      <h3>🌐 تقدم كل لغة على حدة</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="compare-block" style="background:var(--id-soft);border:1px solid #f3d8c2">
+          <div class="cb-head">🇮🇩 الإندونيسية ${lvI ? `<span class="tag">${lvI.lvl} تقديري</span>` : ""}</div>
+          <div class="progress"><i style="width:${lp.id.pct}%"></i></div>
+          <p class="mini-note">${lp.id.n} جملة أتممتها بالإندونيسية من ${lp.total} — ${lp.id.pct}%</p>
+        </div>
+        <div class="compare-block" style="background:var(--tr-soft);border:1px solid #d9dcf5">
+          <div class="cb-head">🇹🇷 التركية ${lvT ? `<span class="tag">${lvT.lvl} تقديري</span>` : ""}</div>
+          <div class="progress"><i style="width:${lp.tr.pct}%"></i></div>
+          <p class="mini-note">${lp.tr.n} جملة أتممتها بالتركية من ${lp.total} — ${lp.tr.pct}%</p>
+        </div>
+      </div>
+      <p class="mini-note">يُحتسب التقدم من بطاقاتك واختباراتك في كل لغة اتجاهًا. ${(!lvI && !lvT) ? '<a href="#/placement">حدّد مستواك التقديري باختبار 12 سؤالًا ←</a>' : ""}</p>
+    </div>
     <div class="box">
       <h3>🎯 هدف اليوم</h3>
       <div class="progress"><i style="width:${Math.min(100, Math.round(t.n / goal * 100))}%"></i></div>
@@ -109,6 +163,73 @@
       App.store.set("settings", s); toast("تم ضبط الهدف اليومي ✅"); App.Views.progress();
     });
   };
+
+  /* ============ ✍️ تمرين الكتابة (R4) ============ */
+  let wr = null;
+  App.Views.write = function () {
+    if (!wr || wr.done) {
+      const pool = App.bankSorted().filter(p => (p.i || "").split(" ").length >= 3).sort(() => Math.random() - .5).slice(0, 10);
+      wr = { pool, idx: 0, mode: "order", score: 0, done: false };
+    }
+    renderWrite();
+  };
+  function renderWrite() {
+    if (wr.idx >= wr.pool.length) {
+      App.track("writing", wr.score);
+      wr.done = true;
+      $("#view").innerHTML = `
+      <div class="box" style="text-align:center;padding:30px">
+        <div style="font-size:2.6rem">✍️</div>
+        <h3>أنهيت جلسة الكتابة: ${wr.score}/${wr.pool.length}</h3>
+        <div class="callout tip">${wr.score >= 8 ? "تحكم ممتاز بالترتيب والإملاء 💪" : wr.score >= 5 ? "قاعدة متينة — كرر الجلسة غدًا وتوقف عند الكلمات التي أخطأت بها" : "ابدأ بعدد أقل عبر إتقان «أهم 50» أولًا ثم عد"}</div>
+        <div style="margin-top:10px"><button class="btn primary sm" onclick="location.hash='#/write';location.reload()">🔁 جلسة جديدة</button></div>
+      </div>`;
+      return;
+    }
+    const p = wr.pool[wr.idx];
+    const words = p.i.split(/\s+/).filter(Boolean).sort(() => Math.random() - .5);
+    $("#view").innerHTML = `
+    <div class="crumbs"><a href="#/cards">🃏 التدريب</a> ‹ ✍️ تمرين الكتابة</div>
+    <div class="box">
+      <div class="tr-progress">${wr.pool.map((_, k) => `<i class="${k < wr.idx ? "done" : k === wr.idx ? "now" : ""}"></i>`).join("")}</div>
+      <div class="tr-prompt" style="text-align:center;font-size:1.15rem;font-weight:800">${esc(p.a)}</div>
+      <p class="mini-note" style="text-align:center">رتّب الجملة بالإندونيسية (انقر الكلمات بالترتيب):</p>
+      <div id="wrBuilt" class="tr-prompt ltr" style="min-height:52px;background:#f6f9fc;font-weight:700"></div>
+      <div id="wrPool" style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:10px">
+        ${words.map(w => `<button class="chip" style="direction:ltr">${esc(w)}</button>`).join("")}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+        <button class="btn ghost sm" id="wrUndo">↩️ تراجع</button>
+        <button class="btn primary sm" id="wrCheck">تحقق ✓</button>
+      </div>
+      <div id="wrFb"></div>
+    </div>`;
+    const built = [];
+    const pool = document.getElementById("wrPool"), out = document.getElementById("wrBuilt");
+    const draw = () => { out.textContent = built.join(" "); };
+    pool.addEventListener("click", e => {
+      const b = e.target.closest(".chip"); if (!b || b.disabled) return;
+      b.disabled = true; b.style.opacity = .35;
+      built.push(b.textContent.trim()); draw();
+    });
+    document.getElementById("wrUndo").addEventListener("click", () => {
+      const last = built.pop(); if (!last) return; draw();
+      [...pool.querySelectorAll(".chip")].forEach(c => { if (c.textContent.trim() === last && c.disabled) { c.disabled = false; c.style.opacity = 1; } });
+    });
+    document.getElementById("wrCheck").addEventListener("click", () => {
+      const target = p.i.replace(/[""\.,!?]/g, "").replace(/\s+/g, " ").trim();
+      const mine = built.join(" ").replace(/[""\.,!?]/g, "").replace(/\s+/g, " ").trim();
+      const okA = App.norm(mine) === App.norm(target);
+      if (okA) { wr.score++; App.langTrack("id", p.id); }
+      else App.addMistake({ q: "رتّب: " + p.a, correct: p.i, lang: "id", source: "✍️ كتابة", why: p.n || "" });
+      App.track("writing", 1);
+      document.getElementById("wrFb").innerHTML = `
+        <div class="feedback ${okA ? "f3" : "f1"}"><b class="t">${okA ? "🎉 ترتيب صحيح!" : "❌ الترتيب الصحيح:"}</b>
+        <div class="ltext">${esc(p.i)}</div>${p.it ? `<div class="ltrans">النطق: ${esc(p.it)}</div>` : ""}</div>
+        <div style="text-align:center;margin-top:8px"><button class="btn primary sm" id="wrNext">${wr.idx + 1 < wr.pool.length ? "التالي ←" : "إنهاء 🏁"}</button></div>`;
+      document.getElementById("wrNext").addEventListener("click", () => { wr.idx++; renderWrite(); });
+    });
+  }
 
   /* ============ وضع النجاة ============ */
   App.Views.survival = function () {

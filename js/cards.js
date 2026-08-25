@@ -115,15 +115,19 @@
         </div>
       </div>
       ${run.flipped ? `
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button class="btn danger" id="cAgain">😕 أعيدها</button>
-        <button class="btn primary" id="cGood">🙂 أعرفها</button>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+        <button class="btn danger sm" id="cAgain">😕 أعدها</button>
+        <button class="btn ghost sm" id="cHard">😐 صعبة</button>
+        <button class="btn primary sm" id="cGood">🙂 جيدة</button>
+        <button class="btn ghost sm" id="cEasy">😄 سهلة</button>
       </div>` : `<div style="text-align:center"><button class="btn primary" id="cFlip">👁️ اقلب البطاقة</button></div>`}
     </div>`;
     document.getElementById("flipCard").addEventListener("click", () => { if (!run.flipped) { run.flipped = true; renderCard(); } });
     const f = document.getElementById("cFlip"); if (f) f.addEventListener("click", () => { run.flipped = true; renderCard(); });
-    const a = document.getElementById("cAgain"); if (a) a.addEventListener("click", () => answerCard(false));
-    const g = document.getElementById("cGood"); if (g) g.addEventListener("click", () => answerCard(true));
+    const a = document.getElementById("cAgain"); if (a) a.addEventListener("click", () => answerCard("again"));
+    const h = document.getElementById("cHard"); if (h) h.addEventListener("click", () => answerCard("hard"));
+    const g = document.getElementById("cGood"); if (g) g.addEventListener("click", () => answerCard("good"));
+    const ez = document.getElementById("cEasy"); if (ez) ez.addEventListener("click", () => answerCard("easy"));
   }
 
   function answerCard(good) {
@@ -188,7 +192,7 @@
       const ok = b.dataset.ok === "1";
       App.track && App.track("quiz");
       if (!ok) App.addMistake && App.addMistake({ q: p.a, correct, lang: q.dir, source: "📝 اختبار", why: p.n ? "تلميح: " + p.n : "" });
-      if (ok) q.score++;
+      if (ok) { q.score++; App.langTrack && App.langTrack(q.dir, p.id); }
       document.querySelectorAll(".quiz-opt").forEach(x => {
         if (x.dataset.ok === "1") x.classList.add("right");
         else if (x === b) x.classList.add("wrong");
