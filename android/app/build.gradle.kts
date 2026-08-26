@@ -62,4 +62,6 @@ val copyWebAssets by tasks.registering(Copy::class) {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
-tasks.named("preBuild") { dependsOn(copyWebAssets) }
+afterEvaluate {
+    tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(copyWebAssets) }
+}
