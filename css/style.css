@@ -258,7 +258,7 @@ details.box .dbody{margin-top:10px}
 code.k{background:#eef2f6;border-radius:6px;padding:0 6px;font-size:.85em;direction:ltr;display:inline-block}
 
 /* ===== أنماط الحوار: إخفاء الترجمة/النص (§18) ===== */
-.hide-ar .bubble .ar, .hide-ar .flip-face.flip-front .big {display:none}
+.hide-ar .bubble .ar, .hide-ar .flip-face.flip-front .big, .hide-ar .phrase-card .ph-ar {display:none}
 .hide-tl #view .bubble .lang-block {display:none}
 .wtap{cursor:pointer;border-bottom:1px dotted #94a3b8}
 .wtap:hover{background:var(--amber-soft)}

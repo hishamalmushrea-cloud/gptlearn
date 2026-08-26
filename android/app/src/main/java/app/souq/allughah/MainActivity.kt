@@ -1,32 +1,39 @@
 package app.souq.allughah
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.viewModels
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.unit.LayoutDirection
-import app.souq.allughah.ui.AcademyRoot
-import app.souq.allughah.ui.AcademyViewModel
-import app.souq.allughah.ui.SouqTheme
+import androidx.activity.OnBackPressedCallback
 
+/**
+ * مسار تقني واحد: غلاف WebView للأكاديمية الويبية الأوفلاين.
+ * المحتوى والمنطق في ملفات PWA (يُنسخان إلى assets عند البناء).
+ */
 class MainActivity : ComponentActivity() {
-    private val vm: AcademyViewModel by viewModels()
+    private lateinit var web: WebView
 
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            SouqTheme {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Surface(Modifier.fillMaxSize()) {
-                        AcademyRoot(vm)
-                    }
-                }
+        web = WebView(this)
+        setContentView(web)
+        web.settings.javaScriptEnabled = true
+        web.settings.domStorageEnabled = true
+        web.settings.allowFileAccess = true
+        web.settings.allowContentAccess = true
+        @Suppress("DEPRECATION")
+        web.settings.allowFileAccessFromFileURLs = true
+        web.settings.mediaPlaybackRequiresUserGesture = false
+        web.webViewClient = WebViewClient()
+        web.webChromeClient = WebChromeClient()
+        web.loadUrl("file:///android_asset/index.html")
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (web.canGoBack()) web.goBack() else finish()
             }
-        }
+        })
     }
 }

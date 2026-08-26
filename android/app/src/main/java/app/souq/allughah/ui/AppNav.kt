@@ -608,3 +608,27 @@ fun LetterTrainer() {
         Text("İ صوت [i] منقوطة حتى في الكبيرة. I بدون نقطة صوت [ɯ] مختلف تمامًا.")
     }
 }
+
+@Composable
+fun LibraryScreen(vm: AcademyViewModel) {
+    val context = LocalContext.current
+    val repo = remember { LibraryRepo(context) }
+    val lang = vm.activeLang().code
+    val docs = remember(lang) { repo.list(lang) }
+    var open by remember { mutableStateOf<LibDoc?>(null) }
+    if (open != null) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            TextButton(onClick = { open = null }) { Text("رجوع") }
+            Text(open!!.title, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text(repo.read(lang, open!!.name), modifier = Modifier.padding(top = 8.dp))
+        }
+        return
+    }
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
+        item { Text("المكتبة المرجعية", fontWeight = FontWeight.Bold, fontSize = 22.sp) }
+        items(docs, key = { it.name }) { d ->
+            ListItem(headlineContent = { Text(d.title) }, modifier = Modifier.clickable { open = d })
+            HorizontalDivider()
+        }
+    }
+}

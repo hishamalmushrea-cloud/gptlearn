@@ -151,30 +151,7 @@
     .replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
 
   App.Trainer = {
-    grade(resp, turn, lang) {
-      const acc = turn.accept || {};
-      const list = Array.isArray(acc) ? acc.map(x => (lang === "id" ? x.i : x.t) || x) : (acc[lang] || acc.i || acc.t || []);
-      const target = list;
-      const keys = (lang === "id" ? turn.keysId : turn.keysTr) || [];
-      const r = norm(resp);
-      if (!r) return 0;
-      const norms = target.map(norm).filter(x => x);
-      if (norms.some(a => a === r)) return 3;
-      if (norms.some(a => (a.includes(r) || r.includes(a)) && Math.min(a.length, r.length) >= 6)) return 3;
-      let best = 0;
-      norms.forEach(a => {
-        const aT = a.split(" "), rT = new Set(r.split(" "));
-        const hit = aT.filter(w => rT.has(w)).length;
-        best = Math.max(best, hit / Math.max(aT.length, 1));
-      });
-      const keyHits = keys.filter(k => r.includes(norm(k))).length;
-      const keyScore = keys.length ? keyHits / keys.length : 0;
-      const score = Math.max(best, keyScore * .95);
-      if (score >= .65) return 3;
-      if (score >= .4) return 2;
-      if (score >= .18) return 1;
-      return 0;
-    },
+    grade(resp, turn, lang) { return Engine.grade(resp, turn, lang); },
     startFromTrainer(id) {
       const t = DB.trainers.find(x => x.id === id);
       if (!t) { App.Views.train(); return; }

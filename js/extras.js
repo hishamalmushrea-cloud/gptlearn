@@ -27,24 +27,74 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
     return l[lang] || null;
   };
 
-  /* ---------- محرك «ماذا أتعلم الآن؟» (R3 — توصية صادقة بقواعد معلنة) ---------- */
+  /* ---------- محرك «ماذا أتعلم الآن؟» — قواعد معلنة ---------- */
+  function nextSalesChapter() {
+    for (const id of Engine.SALES_PATH) {
+      const c = DB.chapters.find(x => x.id === id);
+      if (!c) continue;
+      const ph = c.phrases || [];
+      const done = ph.filter(p => App.learned.has(p.id)).length;
+      if (!ph.length || done < ph.length) return { ch: c, done, total: ph.length };
+    }
+    return null;
+  }
   App.nextBest = function () {
     const b = App.store.get("leitner", {}), now = Date.now();
-    const due = Object.values(b).filter(x => now >= (x.due || 0)).length;
+    const due = Engine.dueCount(b, now);
     const mis = App.store.get("mistakes", []).length;
-    const total = App.allPhrases().length, doneN = App.learned.size;
+    const doneN = App.learned.size;
+    const sale = nextSalesChapter();
     if (mis >= 5) return { icon: "❌", title: "راجع أخطائك أولًا", desc: mis + " أخطاء متراكمة — المراجعة المبنية على الخطأ أعلى مردود الآن.", href: "#/mistakes" };
     if (due >= 8) return { icon: "🃏", title: "لديك " + due + " بطاقة مستحقة", desc: "المراجعة المجدولة قبل أي جديد — هكذا يثبت القديم.", href: "#/cards" };
     if (doneN < 50) return { icon: "⭐", title: "أكمل أهم 50 جملة", desc: "أنجزت " + doneN + " من 50 — عمود الأساس للسوق.", href: "#/bank" };
     if (due > 0) return { icon: "🃏", title: "بدّد " + due + " بطاقة مستحقة", desc: "ثم افتح تدريبًا جديدًا.", href: "#/cards" };
+    if (sale) return { icon: "🛍️", title: sale.ch.title, desc: "الفصل التالي في مسار البيع (" + sale.done + "/" + sale.total + ").", href: "#/chapter/" + sale.ch.id };
     return { icon: "🎭", title: "تدرّب كالبائع", desc: "بطاقاتك منضبطة — الوقت الأمثل لمحادثة تفاعلية.", href: "#/train" };
+  };
+
+  App.Views.today = function () {
+    const b = App.store.get("leitner", {});
+    const due = Engine.dueCount(b);
+    const mis = App.store.get("mistakes", []).length;
+    const sale = nextSalesChapter();
+    const bank = App.bankSorted();
+    const done50 = bank.slice(0, 50).filter(p => App.learned.has(p.id)).length;
+    const sit = (DB.situations || []).find(s => (s.kind === "situation" || s.kind === "bargain") && (s.chapters || []).some(id => sale && sale.ch.id === id))
+      || (DB.situations || []).find(s => s.kind !== "daily") || (DB.situations || [])[0];
+    const trainer = (DB.trainers || [])[0];
+    const a = App.store.get("activity", {});
+    const today = Engine.localDayKey();
+    const t = a[today] || { n: 0 };
+    const goal = (App.store.get("settings", { lang: "both" }).goal) || 25;
+    $("#view").innerHTML = `
+    <div class="hero">
+      <h1>☀️ ماذا أتعلم اليوم؟</h1>
+      <p>جلسة واحدة مرتّبة: ثبّت القديم، راجع أخطاءك، ثم جملة بيع جديدة. مجاني بالكامل — بلا اشتراك.</p>
+    </div>
+    <div class="box">
+      <h3>🎯 هدف اليوم</h3>
+      <div class="progress"><i style="width:${Math.min(100, Math.round(t.n / goal * 100))}%"></i></div>
+      <p style="margin-top:8px">أنجزت <b>${t.n}</b> من <b>${goal}</b> نشاطًا.</p>
+    </div>
+    <div class="section-title">الخطوات بالترتيب <span class="line"></span></div>
+    <div class="grid-cards">
+      <a class="module-card ${mis ? "hi" : ""}" href="#/mistakes"><div class="ic">❌</div><h3>1) أخطائي</h3><p>${mis ? mis + " خطأ بانتظار المراجعة — ابدأ هنا." : "لا أخطاء معلّقة. ممتاز."}</p></a>
+      <a class="module-card ${due ? "hi" : ""}" href="#/cards"><div class="ic">🃏</div><h3>2) بطاقات مستحقة</h3><p>${due ? due + " بطاقة حان وقتها." : "لا بطاقات مستحقة الآن."}</p></a>
+      <a class="module-card" href="#/bank"><div class="ic">⭐</div><h3>3) أهم 50 جملة</h3><p>أتممت ${done50}/50 من عمود السوق.</p></a>
+      <a class="module-card hi" href="${sale ? "#/chapter/" + sale.ch.id : "#/sales"}"><div class="ic">🛍️</div><h3>4) مسار البيع</h3><p>${sale ? esc(sale.ch.title) + " — " + sale.done + "/" + sale.total : "أنهيت مسار البيع — راجع المواقف."}</p></a>
+      ${sit ? `<a class="module-card" href="#/situation/${sit.id}"><div class="ic">🎬</div><h3>5) حوار اليوم</h3><p>${esc(sit.title)} — اقرأه ثم أعد تمثيله بائعًا أو زبونًا.</p></a>` : ""}
+      ${trainer ? `<a class="module-card" href="#/trainer/${trainer.id}"><div class="ic">🎭</div><h3>6) تدريب تفاعلي</h3><p>${esc(trainer.title)}</p></a>` : ""}
+      <a class="module-card" href="#/write"><div class="ic">✍️</div><h3>7) كتابة</h3><p>رتّب أو اكتب — بالإندونيسية أو التركية.</p></a>
+      <a class="module-card" href="#/listen"><div class="ic">🎧</div><h3>8) استماع</h3><p>اسمع واختر أو اكتب — باللغتين.</p></a>
+    </div>
+    <div class="callout tip">القاعدة: لا تفتح فصلًا جديدًا وفي جعبتك 8 بطاقات مستحقة أو 5 أخطاء بلا مراجعة.</div>`;
   };
 
 
   /* ============ تتبع النشاط والمهارات ============ */
-  const KINDS = { vocab: "📚 مفردات", cards: "🃏 مراجعة", quiz: "📝 اختبار", grammar: "🧩 قواعد", conversation: "🎭 محادثة", listening: "🎧 استماع", reading: "📖 قراءة", test: "🎯 اختبار مستوى" };
+  const KINDS = { vocab: "📚 مفردات", cards: "🃏 مراجعة", quiz: "📝 اختبار", grammar: "🧩 قواعد", conversation: "🎭 محادثة", listening: "🎧 استماع", reading: "📖 قراءة", writing: "✍️ كتابة", test: "🎯 اختبار مستوى" };
   App.track = function (kind, n) {
-    const d = new Date().toISOString().slice(0, 10);
+    const d = Engine.localDayKey();
     const a = App.store.get("activity", {});
     a[d] = a[d] || { n: 0, k: {} };
     a[d].n += (n || 1);
@@ -87,12 +137,11 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
   /* ============ صفحة التقدم ============ */
   App.Views.progress = function () {
     const a = App.store.get("activity", {});
-    const today = new Date().toISOString().slice(0, 10);
+    const today = Engine.localDayKey();
     const goal = (App.store.get("settings", { lang: "both" }).goal) || 25;
     const t = a[today] || { n: 0, k: {} };
-    // السلسلة
     let streak = 0; const d = new Date();
-    for (;;) { const key = d.toISOString().slice(0, 10); if (a[key] && a[key].n > 0) { streak++; d.setDate(d.getDate() - 1); } else break; }
+    for (;;) { const key = Engine.localDayKey(d); if (a[key] && a[key].n > 0) { streak++; d.setDate(d.getDate() - 1); } else break; }
     // مهارات
     const skillTotals = {};
     Object.values(a).forEach(day => Object.entries(day.k || {}).forEach(([k, v]) => skillTotals[k] = (skillTotals[k] || 0) + v));
@@ -150,7 +199,7 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
           <div style="display:flex;justify-content:space-between;font-size:.85rem"><span>${KINDS[k]}</span><b>${skillTotals[k] || 0}</b></div>
           <div class="progress"><i style="width:${Math.round((skillTotals[k] || 0) / maxSkill * 100)}%"></i></div>
         </div>`).join("")}
-      <p class="mini-note">هذه أعداد أنشطة حقيقية سجلها جهازك — لا تقديرات مزيفة. (الكتابة والاستماع المنهجي قيد الطريق — راجع docs/ROADMAP)</p>
+      <p class="mini-note">أعداد أنشطة حقيقية على جهازك — لا تقديرات مزيفة. الكتابة والاستماع متاحتان بالإندونيسية والتركية.</p>
     </div>
     <div class="box">
       <h3>🏅 إنجازات</h3>
@@ -167,10 +216,20 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
 
   /* ============ ✍️ تمرين الكتابة (R4) ============ */
   let wr = null;
+  function parseDrillArg(arg, fallbackLang, fallbackMode) {
+    const parts = String(arg || "").split("/").filter(Boolean);
+    let lang = fallbackLang || "id", mode = fallbackMode || "order";
+    parts.forEach(p => {
+      if (p === "id" || p === "tr") lang = p;
+      if (p === "type" || p === "order" || p === "choose") mode = p === "choose" ? "choose" : p;
+    });
+    return { lang, mode };
+  }
   App.Views.write = function (modeArg) {
-    if (!wr || wr.done || (modeArg && modeArg !== wr.mode)) {
-      const pool = App.bankSorted().filter(p => (p.i || "").split(" ").length >= 3).sort(() => Math.random() - .5).slice(0, 10);
-      wr = { pool, idx: 0, mode: modeArg || "order", score: 0, done: false };
+    const parsed = parseDrillArg(modeArg, (wr && wr.lang) || "id", (wr && wr.mode) || "order");
+    if (!wr || wr.done || wr.lang !== parsed.lang || wr.mode !== parsed.mode) {
+      const pool = Engine.shuffle(App.bankSorted().filter(p => Engine.targetText(p, parsed.lang).split(/\s+/).filter(Boolean).length >= 3)).slice(0, 10);
+      wr = { pool, idx: 0, mode: parsed.mode, lang: parsed.lang, score: 0, done: false };
     }
     renderWrite();
   };
@@ -184,22 +243,25 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
         <div style="font-size:2.6rem">✍️</div>
         <h3>أنهيت جلسة الكتابة: ${wr.score}/${wr.pool.length}</h3>
         <div class="callout tip">${wr.score >= 8 ? "تحكم ممتاز بالترتيب والإملاء 💪" : wr.score >= 5 ? "قاعدة متينة — كرر الجلسة غدًا وتوقف عند الكلمات التي أخطأت بها" : "ابدأ بعدد أقل عبر إتقان «أهم 50» أولًا ثم عد"}</div>
-        <div style="margin-top:10px"><button class="btn primary sm" onclick="location.hash='#/write';location.reload()">🔁 جلسة جديدة</button></div>
+        <div style="margin-top:10px"><a class="btn primary sm" href="#/write/${wr.lang}/${wr.mode}">🔁 جلسة جديدة</a></div>
       </div>`;
       return;
     }
     const p = wr.pool[wr.idx];
-    const words = p.i.split(/\s+/).filter(Boolean).sort(() => Math.random() - .5);
+    const target = Engine.targetText(p, wr.lang);
+    const words = Engine.shuffle(target.split(/\s+/).filter(Boolean));
     $("#view").innerHTML = `
-    <div class="crumbs"><a href="#/cards">🃏 التدريب</a> ‹ ✍️ تمرين الكتابة</div>
+    <div class="crumbs"><a href="#/today">☀️ اليوم</a> ‹ ✍️ تمرين الكتابة</div>
     <div class="chips">
-      <a class="chip ${wr.mode === "order" ? "on" : ""}" href="#/write/order">🧩 رتب الجملة</a>
-      <a class="chip ${wr.mode === "type" ? "on" : ""}" href="#/write/type">⌨️ اكتبها من الذاكرة</a>
+      <a class="chip ${wr.lang === "id" ? "on" : ""}" href="#/write/id/${wr.mode}">🇮🇩 إندونيسية</a>
+      <a class="chip ${wr.lang === "tr" ? "on" : ""}" href="#/write/tr/${wr.mode}">🇹🇷 تركية</a>
+      <a class="chip ${wr.mode === "order" ? "on" : ""}" href="#/write/${wr.lang}/order">🧩 رتب الجملة</a>
+      <a class="chip ${wr.mode === "type" ? "on" : ""}" href="#/write/${wr.lang}/type">⌨️ اكتبها من الذاكرة</a>
     </div>
     <div class="box">
       <div class="tr-progress">${wr.pool.map((_, k) => `<i class="${k < wr.idx ? "done" : k === wr.idx ? "now" : ""}"></i>`).join("")}</div>
       <div class="tr-prompt" style="text-align:center;font-size:1.15rem;font-weight:800">${esc(p.a)}</div>
-      <p class="mini-note" style="text-align:center">رتّب الجملة بالإندونيسية (انقر الكلمات بالترتيب):</p>
+      <p class="mini-note" style="text-align:center">رتّب الجملة بـ${wr.lang === "tr" ? "التركية" : "الإندونيسية"} (انقر الكلمات بالترتيب):</p>
       <div id="wrBuilt" class="tr-prompt ltr" style="min-height:52px;background:#f6f9fc;font-weight:700"></div>
       <div id="wrPool" style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:10px">
         ${words.map(w => `<button class="chip" style="direction:ltr">${esc(w)}</button>`).join("")}
@@ -223,15 +285,17 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
       [...pool.querySelectorAll(".chip")].forEach(c => { if (c.textContent.trim() === last && c.disabled) { c.disabled = false; c.style.opacity = 1; } });
     });
     document.getElementById("wrCheck").addEventListener("click", () => {
-      const target = p.i.replace(/[""\.,!?]/g, "").replace(/\s+/g, " ").trim();
+      const targetN = Engine.targetText(p, wr.lang).replace(/[""\.,!?]/g, "").replace(/\s+/g, " ").trim();
       const mine = built.join(" ").replace(/[""\.,!?]/g, "").replace(/\s+/g, " ").trim();
-      const okA = App.norm(mine) === App.norm(target);
-      if (okA) { wr.score++; App.langTrack("id", p.id); }
-      else App.addMistake({ q: "رتّب: " + p.a, correct: p.i, lang: "id", source: "✍️ كتابة", why: p.n || "" });
+      const okA = App.norm(mine) === App.norm(targetN);
+      if (okA) { wr.score++; App.langTrack(wr.lang, p.id); }
+      else App.addMistake({ q: "رتّب: " + p.a, correct: Engine.targetText(p, wr.lang), lang: wr.lang, source: "✍️ كتابة", why: p.n || "" });
       App.track("writing", 1);
+      const shown = Engine.targetText(p, wr.lang);
+      const ph = wr.lang === "tr" ? p.tt : p.it;
       document.getElementById("wrFb").innerHTML = `
         <div class="feedback ${okA ? "f3" : "f1"}"><b class="t">${okA ? "🎉 ترتيب صحيح!" : "❌ الترتيب الصحيح:"}</b>
-        <div class="ltext">${esc(p.i)}</div>${p.it ? `<div class="ltrans">النطق: ${esc(p.it)}</div>` : ""}</div>
+        <div class="ltext">${esc(shown)}</div>${ph ? `<div class="ltrans">النطق: ${esc(ph)}</div>` : ""}</div>
         <div style="text-align:center;margin-top:8px"><button class="btn primary sm" id="wrNext">${wr.idx + 1 < wr.pool.length ? "التالي ←" : "إنهاء 🏁"}</button></div>`;
       document.getElementById("wrNext").addEventListener("click", () => { wr.idx++; renderWrite(); });
     });
@@ -247,21 +311,23 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
         <div style="font-size:2.6rem">⌨️</div>
         <h3>أنهيت جلسة الكتابة الحرة: ${wr.score}/${wr.pool.length}</h3>
         <div class="callout tip">${wr.score >= 8 ? "إملاؤك ممتاز — انتقل لبطاقات 250" : "الإملاء يُبنى بالتكرار: كرر غدًا نفس الجلسة"}</div>
-        <div style="margin-top:10px"><a class="btn primary sm" href="#/write/type">🔁 جلسة جديدة</a></div>
+        <div style="margin-top:10px"><a class="btn primary sm" href="#/write/${wr.lang}/type">🔁 جلسة جديدة</a></div>
       </div>`;
       return;
     }
     const p = wr.pool[wr.idx];
     App.$("#view").innerHTML = `
-    <div class="crumbs"><a href="#/cards">🃏 التدريب</a> ‹ ⌨️ كتابة من الذاكرة</div>
+    <div class="crumbs"><a href="#/today">☀️ اليوم</a> ‹ ⌨️ كتابة من الذاكرة</div>
     <div class="chips">
-      <a class="chip" href="#/write/order">🧩 رتب الجملة</a>
-      <a class="chip on" href="#/write/type">⌨️ اكتبها من الذاكرة</a>
+      <a class="chip ${wr.lang === "id" ? "on" : ""}" href="#/write/id/type">🇮🇩 إندونيسية</a>
+      <a class="chip ${wr.lang === "tr" ? "on" : ""}" href="#/write/tr/type">🇹🇷 تركية</a>
+      <a class="chip" href="#/write/${wr.lang}/order">🧩 رتب الجملة</a>
+      <a class="chip on" href="#/write/${wr.lang}/type">⌨️ اكتبها من الذاكرة</a>
     </div>
     <div class="box">
       <div class="tr-progress">${wr.pool.map((_, k) => `<i class="${k < wr.idx ? "done" : k === wr.idx ? "now" : ""}"></i>`).join("")}</div>
       <div class="tr-prompt" style="text-align:center;font-size:1.15rem;font-weight:800">${App.esc(p.a)}</div>
-      <p class="mini-note" style="text-align:center">اكتبها بالإندونيسية كما تتذكرها (التصحيح يتسامح مع علامات الترقيم):</p>
+      <p class="mini-note" style="text-align:center">اكتبها بـ${wr.lang === "tr" ? "التركية" : "الإندونيسية"} كما تتذكرها:</p>
       <div class="tr-input" style="justify-content:center">
         <input id="wrTypeIn" type="text" dir="ltr" placeholder="Tulis di sini…" autocomplete="off">
         <button class="btn primary" id="wrTypeGo">تحقق ✓</button>
@@ -272,16 +338,18 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
     const check = () => {
       const val = (inp.value || "").trim();
       if (!val) { App.toast("اكتب جوابك أولًا ✍️"); return; }
-      const g = App.Trainer.grade(val, { accept: [{ i: p.i }], keysId: p.i.split(" ").filter(w => w.length > 3).slice(0, 4) }, "id");
+      const txt = Engine.targetText(p, wr.lang);
+      const keys = txt.split(" ").filter(w => w.length > 3).slice(0, 4);
+      const g = App.Trainer.grade(val, { accept: wr.lang === "tr" ? { t: [txt] } : { i: [txt] }, keysId: wr.lang === "id" ? keys : [], keysTr: wr.lang === "tr" ? keys : [] }, wr.lang);
       const ok = g >= 2;
-      if (g === 3) { wr.score++; App.langTrack("id", p.id); }
-      else if (!ok) App.addMistake({ q: "اكتب: " + p.a, correct: p.i, lang: "id", source: "⌨️ كتابة حرة", why: p.n || "" });
+      if (g === 3) { wr.score++; App.langTrack(wr.lang, p.id); }
+      else if (!ok) App.addMistake({ q: "اكتب: " + p.a, correct: txt, lang: wr.lang, source: "⌨️ كتابة حرة", why: p.n || "" });
       App.track("writing", 1);
       document.getElementById("wrTypeFb").innerHTML = `
         <div class="feedback f${g}"><b class="t">${g === 3 ? "🎉 مطابقة تامة!" : g === 2 ? "👍 قريب جدًا — مع أخطاء صغيرة" : g === 1 ? "🛠️ نصف الطريق — قارن" : "❌ النموذج الصحيح:"}</b>
-        <div class="ltext">${App.esc(p.i)}</div>
+        <div class="ltext">${App.esc(txt)}</div>
         <div class="ltrans">نطقك: ${App.esc(val)}</div>
-        ${p.it ? `<div class="ltrans">النطق الصحيح: ${App.esc(p.it)}</div>` : ""}</div>
+        ${(wr.lang === "tr" ? p.tt : p.it) ? `<div class="ltrans">النطق الصحيح: ${App.esc(wr.lang === "tr" ? p.tt : p.it)}</div>` : ""}</div>
         <div style="text-align:center;margin-top:8px"><button class="btn primary sm" id="wrTypeNext">${wr.idx + 1 < wr.pool.length ? "التالي ←" : "إنهاء 🏁"}</button></div>`;
       document.getElementById("wrTypeNext").addEventListener("click", () => { wr.idx++; renderWriteType(); });
     };
@@ -292,10 +360,11 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
   /* ============ 🎧 تمارين الاستماع ============ */
   let ls = null;
   App.Views.listen = function (tab) {
-    if (tab === "type") { App.Views.listenType(); return; }
-    if (!ls || ls.done) {
-      const pool = App.bankSorted().slice(0, 300).sort(() => Math.random() - .5).slice(0, 10);
-      ls = { pool, idx: 0, mode: "choose", score: 0, done: false };
+    const parsed = parseDrillArg(tab, (ls && ls.lang) || "id", tab && String(tab).includes("type") ? "type" : "choose");
+    if (parsed.mode === "type") { App.Views.listenType(parsed.lang); return; }
+    if (!ls || ls.done || ls.lang !== parsed.lang || ls.mode !== "choose") {
+      const pool = Engine.shuffle(App.bankSorted().filter(p => Engine.hasLangText(p, parsed.lang)).slice(0, 300)).slice(0, 10);
+      ls = { pool, idx: 0, mode: "choose", lang: parsed.lang, score: 0, done: false };
     }
     renderListen();
   };
@@ -306,25 +375,29 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
       <div class="box" style="text-align:center;padding:30px">
         <div style="font-size:2.6rem">🎧</div>
         <h3>أنهيت جلسة الاستماع: ${ls.score}/${ls.pool.length}</h3>
-        <div class="callout tip">إن لم تسمع الصوت: صوت ${"اللغة"} غير مثبت على جهازك — استخدم «اسمع واكتب» بالنطق المكتوب أسفل كل جواب، أو ثبّت حزمة أصوات اللغة في إعدادات جهازك.</div>
-        <div style="margin-top:10px"><a class="btn primary sm" href="#/listen">🔁 جلسة جديدة</a></div>
+        <div class="callout tip">إن لم تسمع الصوت: ثبّت حزمة أصوات اللغة في جهازك أو استعن بالنطق المكتوب.</div>
+        <div style="margin-top:10px"><a class="btn primary sm" href="#/listen/${ls.lang}">🔁 جلسة جديدة</a></div>
       </div>`;
       return;
     }
     const p = ls.pool[ls.idx];
-    const others = App.allPhrases().filter(x => x.id !== p.id).sort(() => Math.random() - .5).slice(0, 3);
-    const opts = [p, ...others].sort(() => Math.random() - .5);
+    const txt = Engine.targetText(p, ls.lang);
+    const code = ls.lang === "tr" ? "tr-TR" : "id-ID";
+    const others = Engine.shuffle(App.allPhrases().filter(x => x.id !== p.id && Engine.hasLangText(x, ls.lang))).slice(0, 3);
+    const opts = Engine.shuffle([p, ...others]);
     App.$("#view").innerHTML = `
-    <div class="crumbs"><a href="#/cards">🃏 التدريب</a> ‹ 🎧 تمرين الاستماع</div>
+    <div class="crumbs"><a href="#/today">☀️ اليوم</a> ‹ 🎧 تمرين الاستماع</div>
     <div class="chips">
+      <a class="chip ${ls.lang === "id" ? "on" : ""}" href="#/listen/id">🇮🇩 إندونيسية</a>
+      <a class="chip ${ls.lang === "tr" ? "on" : ""}" href="#/listen/tr">🇹🇷 تركية</a>
       <button class="chip on">اسمع واختر المعنى</button>
-      <a class="chip" href="#/listen/type">⌨️ اسمع واكتب</a>
+      <a class="chip" href="#/listen/${ls.lang}/type">⌨️ اسمع واكتب</a>
     </div>
     <div class="box">
       <div class="tr-progress">${ls.pool.map((_, k) => `<i class="${k < ls.idx ? "done" : k === ls.idx ? "now" : ""}"></i>`).join("")}</div>
       <div style="text-align:center;margin:12px 0">
-        <button class="icon-btn" style="width:56px;height:56px;font-size:1.6rem" data-act="speak" data-code="id-ID" data-text="${App.esc(p.i)}">🔊</button>
-        <button class="icon-btn" style="width:44px;height:44px;font-size:1.1rem" data-act="speak" data-code="id-ID" data-text="${App.esc(p.i)}" data-rate="0.65" title="بطيء">🐢</button>
+        <button class="icon-btn" style="width:56px;height:56px;font-size:1.6rem" data-act="speak" data-code="${code}" data-text="${App.esc(txt)}">🔊</button>
+        <button class="icon-btn" style="width:44px;height:44px;font-size:1.1rem" data-act="speak" data-code="${code}" data-text="${App.esc(txt)}" data-rate="0.65" title="بطيء">🐢</button>
       </div>
       <p class="mini-note" style="text-align:center">اضغط 🔊 واسمع، ثم اختر المعنى العربي الصحيح (أعد التشغيل بلا حدود)</p>
       <div id="lsOpts">${opts.map(o => `<button class="quiz-opt" data-ok="${o.id === p.id ? 1 : 0}" data-ar="${App.esc(o.a)}">${App.esc(o.a)}</button>`).join("")}</div>
@@ -334,41 +407,48 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
       const b = e.target.closest(".quiz-opt"); if (!b || b.disabled) return;
       const ok = b.dataset.ok === "1";
       App.track("listening", 1);
-      if (ok) { ls.score++; App.langTrack("id", p.id); }
-      else App.addMistake({ q: "🎧 سمعتَ: " + p.i, correct: p.a, lang: "id", source: "🎧 استماع", why: "أعد الاستماع بالسرعة البطيئة 🐢" });
+      if (ok) { ls.score++; App.langTrack(ls.lang, p.id); }
+      else App.addMistake({ q: "🎧 سمعتَ: " + txt, correct: p.a, lang: ls.lang, source: "🎧 استماع", why: "أعد الاستماع بالسرعة البطيئة 🐢" });
       document.querySelectorAll("#lsOpts .quiz-opt").forEach(x => {
         if (x.dataset.ok === "1") x.classList.add("right"); else if (x === b) x.classList.add("wrong");
         x.disabled = true;
       });
       document.getElementById("lsFb").innerHTML = `
         <div class="feedback ${ok ? "f3" : "f1"}"><b class="t">${ok ? "🎉 سمعك حاد!" : "❌ الصوت كان يعني:"}</b>
-        <div class="ltext">${App.esc(p.i)}</div><div class="ltrans">النطق: ${App.esc(p.it || "")}</div></div>
+        <div class="ltext">${App.esc(txt)}</div><div class="ltrans">النطق: ${App.esc((ls.lang === "tr" ? p.tt : p.it) || "")}</div></div>
         <div style="text-align:center;margin-top:8px"><button class="btn primary sm" id="lsNext">${ls.idx + 1 < ls.pool.length ? "التالي ←" : "إنهاء 🏁"}</button></div>`;
       document.getElementById("lsNext").addEventListener("click", () => { ls.idx++; renderListen(); });
     });
   }
   /* ⌨️ اسمع واكتب */
   let lst = null;
-  App.Views.listenType = function () {
-    if (!lst || lst.done) {
-      const pool = App.bankSorted().filter(p => (p.i || "").split(" ").length >= 2).sort(() => Math.random() - .5).slice(0, 8);
-      lst = { pool, idx: 0, score: 0, done: false };
+  App.Views.listenType = function (langArg) {
+    const lang = (langArg === "tr" || langArg === "id") ? langArg : ((lst && lst.lang) || "id");
+    if (!lst || lst.done || lst.lang !== lang) {
+      const pool = Engine.shuffle(App.bankSorted().filter(p => Engine.targetText(p, lang).split(/\s+/).filter(Boolean).length >= 2)).slice(0, 8);
+      lst = { pool, idx: 0, score: 0, done: false, lang };
     }
     if (lst.idx >= lst.pool.length) {
       App.track("listening", lst.score); lst.done = true;
-      App.$("#view").innerHTML = `<div class="box" style="text-align:center;padding:30px"><div style="font-size:2.6rem">🎧⌨️</div><h3>أنهيت «اسمع واكتب»: ${lst.score}/${lst.pool.length}</h3><div style="margin-top:10px"><a class="btn primary sm" href="#/listen/type">🔁 جلسة جديدة</a> <a class="btn ghost sm" href="#/listen">🎧 اسمع واختر</a></div></div>`;
+      App.$("#view").innerHTML = `<div class="box" style="text-align:center;padding:30px"><div style="font-size:2.6rem">🎧⌨️</div><h3>أنهيت «اسمع واكتب»: ${lst.score}/${lst.pool.length}</h3><div style="margin-top:10px"><a class="btn primary sm" href="#/listen/${lst.lang}/type">🔁 جلسة جديدة</a> <a class="btn ghost sm" href="#/listen/${lst.lang}">🎧 اسمع واختر</a></div></div>`;
       return;
     }
     const p = lst.pool[lst.idx];
+    const txt = Engine.targetText(p, lst.lang);
+    const code = lst.lang === "tr" ? "tr-TR" : "id-ID";
     App.$("#view").innerHTML = `
-    <div class="crumbs"><a href="#/listen">🎧 الاستماع</a> ‹ ⌨️ اسمع واكتب</div>
+    <div class="crumbs"><a href="#/listen/${lst.lang}">🎧 الاستماع</a> ‹ ⌨️ اسمع واكتب</div>
+    <div class="chips">
+      <a class="chip ${lst.lang === "id" ? "on" : ""}" href="#/listen/id/type">🇮🇩 إندونيسية</a>
+      <a class="chip ${lst.lang === "tr" ? "on" : ""}" href="#/listen/tr/type">🇹🇷 تركية</a>
+    </div>
     <div class="box">
       <div class="tr-progress">${lst.pool.map((_, k) => `<i class="${k < lst.idx ? "done" : k === lst.idx ? "now" : ""}"></i>`).join("")}</div>
       <div style="text-align:center;margin:12px 0">
-        <button class="icon-btn" style="width:56px;height:56px;font-size:1.6rem" data-act="speak" data-code="id-ID" data-text="${App.esc(p.i)}">🔊</button>
-        <button class="icon-btn" style="width:44px;height:44px" data-act="speak" data-code="id-ID" data-text="${App.esc(p.i)}" data-rate="0.65">🐢</button>
+        <button class="icon-btn" style="width:56px;height:56px;font-size:1.6rem" data-act="speak" data-code="${code}" data-text="${App.esc(txt)}">🔊</button>
+        <button class="icon-btn" style="width:44px;height:44px" data-act="speak" data-code="${code}" data-text="${App.esc(txt)}" data-rate="0.65">🐢</button>
       </div>
-      <p class="mini-note" style="text-align:center">اكتب ما سمعتَه بالإندونيسية (الترقيم لا يُحسب):</p>
+      <p class="mini-note" style="text-align:center">اكتب ما سمعتَه بـ${lst.lang === "tr" ? "التركية" : "الإندونيسية"} (الترقيم لا يُحسب):</p>
       <div class="tr-input" style="justify-content:center">
         <input id="lsTypeIn" type="text" dir="ltr" placeholder="Tulis yang kamu dengar…" autocomplete="off">
         <button class="btn primary" id="lsTypeGo">تحقق ✓</button>
@@ -380,13 +460,14 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
     const check = () => {
       const val = (inp.value || "").trim();
       if (!val) { App.toast("اكتب ما سمعته ✍️"); return; }
-      const g = App.Trainer.grade(val, { accept: [{ i: p.i }], keysId: p.i.split(" ").filter(w => w.length > 3).slice(0, 4) }, "id");
-      if (g === 3) { lst.score++; App.langTrack("id", p.id); }
-      else App.addMistake({ q: "🎧 اكتب ما سمعت", correct: p.i, lang: "id", source: "🎧 اسمع واكتب", why: p.n || "" });
+      const keys = txt.split(" ").filter(w => w.length > 3).slice(0, 4);
+      const g = App.Trainer.grade(val, { accept: lst.lang === "tr" ? { t: [txt] } : { i: [txt] }, keysId: lst.lang === "id" ? keys : [], keysTr: lst.lang === "tr" ? keys : [] }, lst.lang);
+      if (g === 3) { lst.score++; App.langTrack(lst.lang, p.id); }
+      else App.addMistake({ q: "🎧 اكتب ما سمعت", correct: txt, lang: lst.lang, source: "🎧 اسمع واكتب", why: p.n || "" });
       App.track("listening", 1);
       document.getElementById("lsTypeFb").innerHTML = `
         <div class="feedback f${g}"><b class="t">${g === 3 ? "🎉 كتابة مطابقة!" : g === 2 ? "👍 شبه مطابق" : "❌ الصواب:"}</b>
-        <div class="ltext">${App.esc(p.i)}</div><div class="ltrans">معناه: ${App.esc(p.a)} · النطق: ${App.esc(p.it || "")}</div></div>
+        <div class="ltext">${App.esc(txt)}</div><div class="ltrans">معناه: ${App.esc(p.a)} · النطق: ${App.esc((lst.lang === "tr" ? p.tt : p.it) || "")}</div></div>
         <div style="text-align:center;margin-top:8px"><button class="btn primary sm" id="lsTypeNext">${lst.idx + 1 < lst.pool.length ? "التالي ←" : "إنهاء 🏁"}</button></div>`;
       document.getElementById("lsTypeNext").addEventListener("click", () => { lst.idx++; App.Views.listenType(); });
     };
@@ -398,7 +479,7 @@ App.slowMode = false; /* وضع الصوت البطيء العام (§18) — ي
   /* ============ وضع النجاة ============ */
   App.Views.survival = function () {
     const surv = DB.survival || [];
-    App.track && App.track("vocab", 0);
+    /* لا نشاط وهمي عند مجرد فتح الصفحة */
     $("#view").innerHTML = `
     <div class="hero" style="background:linear-gradient(135deg,#0f766e,#14b8a6)">
       <h1>🆘 وضع النجاة — بلمسة واحدة</h1>

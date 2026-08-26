@@ -129,7 +129,7 @@
     const doneIn = list.filter(p => App.learned.has(p.id)).length;
     $("#view").innerHTML = `
     <div class="section-title">⭐ بنك الجمل الجاهزة للبائع <span class="line"></span></div>
-    <div class="callout tip">كل جمل هذا التطبيق تدخل البنك تلقائيًا وترتّب نفسها بالأولوية (p1 = أهم جملة في السوق). تعلّمها تدريجيًا: أتممت 50؟ انتقل للمئة… وهكذا حتى 1000. اضغط ✓ على كل جملة أنهيتها.</div>
+    <div class="callout tip">البنك ثنائي اللغة فقط (بدون العبارات المستوردة أحادية الجانب). مرتّب بالأولوية p1–p5. أتممت 50؟ انتقل للمئة. اضغط ✓ على كل جملة أنهيتها.</div>
     <div class="chips" id="tierTabs">
       ${TIERS.map(([n, label], i) => `<button class="chip ${i === t ? "on" : ""}" data-t="${i}">${label} <span class="mini-note">(${sizes[i]})</span></button>`).join("")}
     </div>
@@ -216,11 +216,11 @@
   };
 
   function start(lang) {
-    const bank = App.bankSorted();
-    const bands = [[0, 4], [40, 4], [120, 4]]; // سهل/متوسط/متقدم حسب الأولوية
+    const bank = App.bankSorted().filter(p => Engine.hasLangText(p, lang));
+    const bands = [[0, 4], [40, 4], [120, 4]];
     let qs = [];
     bands.forEach(([from, n]) => {
-      const pool = bank.slice(from, from + 40).sort(() => Math.random() - .5).slice(0, n);
+      const pool = Engine.shuffle(bank.slice(from, from + 40)).slice(0, n);
       qs = qs.concat(pool);
     });
     run = { lang, qs, idx: 0, score: 0, answered: false, done: false };
@@ -231,9 +231,9 @@
     const q = run.qs[run.idx];
     if (!q || run.idx >= run.qs.length) { renderResult(); return; }
     const correct = run.lang === "id" ? q.i : q.t;
-    const others = App.allPhrases().filter(x => x.id !== q.id && (run.lang === "id" ? x.i : x.t) !== correct)
-      .sort(() => Math.random() - .5).slice(0, 3).map(x => run.lang === "id" ? x.i : x.t);
-    const opts = [correct, ...others].sort(() => Math.random() - .5);
+    const others = Engine.shuffle(App.allPhrases().filter(x => x.id !== q.id && Engine.hasLangText(x, run.lang) && (run.lang === "id" ? x.i : x.t) !== correct))
+      .slice(0, 3).map(x => run.lang === "id" ? x.i : x.t);
+    const opts = Engine.shuffle([correct, ...others]);
     App.$("#plcArea").innerHTML = `
     <div class="box">
       <div class="tr-progress">${run.qs.map((_, k) => `<i class="${k < run.idx ? "done" : k === run.idx ? "now" : ""}"></i>`).join("")}</div>
@@ -273,8 +273,10 @@
       <p style="color:var(--sub)">أجبت بشكل صحيح عن ${s} من 12 بـ${run.lang === "id" ? "الإندونيسية" : "التركية"}</p>
       <div class="callout tip" style="text-align:right">${band.tip}</div>
       <div style="text-align:right;margin-top:10px">${band.links.map(([h, t]) => `<p><a href="${h}">← ${t}</a></p>`).join("")}</div>
-      <div style="margin-top:14px"><button class="btn ghost sm" onclick="location.hash='#/placement';location.reload()">🔁 أعد الاختبار</button></div>
+      <div style="margin-top:14px"><button class="btn ghost sm" id="plcRetry">🔁 أعد الاختبار</button></div>
     </div>`;
+    const retry = document.getElementById("plcRetry");
+    if (retry) retry.addEventListener("click", () => { run = null; App.Views.placement(); });
   }
 })();
 
@@ -318,7 +320,7 @@ App.Views.plan = function () {
   ];
   App.$("#view").innerHTML = `
   <div class="section-title">🗓️ خطة 30 يومًا — من الصفر إلى أول بيع <span class="line"></span></div>
-  <div class="callout tip"><b>20–30 دقيقة يوميًا فقط.</b> القاعدة: يوم قراءة + يوم تدريب بالبطاقات + كل أسبوع حوار تُمثّله بنفسك. عند نهاية الشهر ستكون أتممت «أهم 100 جملة» وثلاثة حوارات كاملة تمثيلًا — وهذا يعني أول حوار حقيقي بمحل حقيقي بإذن الله.</div>
+  <div class="callout tip"><b>20–30 دقيقة يوميًا فقط.</b> ابدأ كل يوم من <a href="#/today">☀️ ماذا أتعلم اليوم؟</a> ثم نفّذ الخطة. القاعدة: راجع الأخطاء والبطاقات المستحقة قبل فصل جديد.</div>
   ${weeks.map(w => `
     <div class="box"><h3>${w.t}</h3>
       <div class="tbl-wrap"><table class="tbl">

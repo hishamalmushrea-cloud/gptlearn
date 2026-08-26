@@ -10,14 +10,21 @@ const App = (() => {
   /* ---------- تخزين ---------- */
   const store = {
     get(key, def) { try { const v = localStorage.getItem("gl_" + key); return v ? JSON.parse(v) : def; } catch (e) { return def; } },
-    set(key, val) { try { localStorage.setItem("gl_" + key, JSON.stringify(val)); } catch (e) {} }
+    set(key, val) {
+      try { localStorage.setItem("gl_" + key, JSON.stringify(val)); }
+      catch (e) { try { toast("تعذّر الحفظ — مساحة المتصفح ممتلئة. صدّر نسخة ثم احذف بيانات قديمة."); } catch (err) {} }
+    }
   };
   let settings = store.get("settings", { lang: "both" });
-    let learned = new Set(store.get("learned", []));
-  let favs = new Set(store.get("favs", []));
+  const learned = new Set(store.get("learned", []));
+  const favs = new Set(store.get("favs", []));
 
   const saveLearned = () => store.set("learned", [...learned]);
   const saveFavs = () => store.set("favs", [...favs]);
+  function replaceSet(target, values) {
+    target.clear();
+    (values || []).forEach(v => target.add(v));
+  }
 
   /* ---------- أدوات ---------- */
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -56,8 +63,9 @@ const App = (() => {
     }
   }
 
-  /* ---------- تجميع العبارات ---------- */
-  function allPhrases() {
+  /* ---------- تجميع العبارات (المستورد الأحادي خارج البنك الافتراضي) ---------- */
+  let _allCache = null, _coreCache = null;
+  function collectPhrases() {
     const out = [];
     DB.chapters.forEach(c => (c.phrases || []).forEach(p => out.push({ ...p, ch: c.id, chTitle: c.title })));
     const B = DB.basics || {};
@@ -65,10 +73,17 @@ const App = (() => {
     ((B.numbers || {}).phrases || []).forEach(p => out.push({ ...p, ch: "numbers", chTitle: "الأرقام والأسعار" }));
     return out;
   }
-  function bankSorted() {
-    return allPhrases().sort((a, b) => (a.p || 5) - (b.p || 5));
+  function allPhrases(opts) {
+    if (!_allCache) {
+      _allCache = collectPhrases();
+      _coreCache = _allCache.filter(p => !Engine.isImportedPhrase(p));
+    }
+    return (opts && opts.includeImported) ? _allCache : _coreCache;
   }
-  function phraseById(id) { return allPhrases().find(p => p.id === id); }
+  function bankSorted() {
+    return allPhrases().slice().sort((a, b) => (a.p || 5) - (b.p || 5));
+  }
+  function phraseById(id) { return allPhrases({ includeImported: true }).find(p => p.id === id); }
   function chapter(id) { return DB.chapters.find(c => c.id === id); }
 
   /* ---------- عرض بطاقة عبارة ---------- */
@@ -106,7 +121,7 @@ const App = (() => {
     <div class="phrase-card ${isL ? "learned" : ""}" id="pc-${p.id}">
       <div class="ph-top">
         <div class="ph-ar">${esc(p.a)}</div>
-        <button class="icon-btn ${isL ? "done" : ""}" data-act="learn" data-id="${p.id}" title="علّمتها">${isL ? "✓" : "✓"}</button>
+        <button class="icon-btn ${isL ? "done" : ""}" data-act="learn" data-id="${p.id}" title="${isL ? "أزل من أنهيتها" : "علّمتها"}" aria-label="${isL ? "أُتمّت" : "علّمتها"}">${isL ? "✓" : "○"}</button>
         <button class="icon-btn ${isF ? "faved" : ""}" data-act="fav" data-id="${p.id}" title="احفظها">${isF ? "❤️" : "🤍"}</button>
       </div>
       <div class="ph-meta">${lvBadge(p.lv)} ${p.chTitle ? `<span class="tag">${esc(p.chTitle)}</span>` : ""}</div>
@@ -203,50 +218,74 @@ const App = (() => {
   /* ---------- صفحة قسم البيع ---------- */
   Views.sales = function () {
     const chapters = DB.chapters.filter(c => (c.group || "sales") === "sales");
-    const view = `
-    <div class="hero" style="background:linear-gradient(135deg,#7c2d12,#c2410c)">
-      <h1>🛍️ البيع والشراء والتعامل مع الزبائن</h1>
-      <p>Sales, Shopping & Customer Interaction — من لحظة رؤية الزبون حتى ما بعد إتمام البيع. كل عبارة موثّقة: ماذا يقول البائع <b>فعلًا</b> في إندونيسيا وتركيا، ومستوى رسميتها، ولمن تقال، ولماذا هي طبيعية — لا ترجمة حرفية من العربية.</p>
-    </div>
-    <div class="section-title">📚 الفصول <span class="line"></span></div>
-    <div class="grid-cards">
-      ${chapters.map(c => `
+    const pathIds = Engine.SALES_PATH;
+    const pathCh = pathIds.map(id => chapters.find(c => c.id === id)).filter(Boolean);
+    const extra = chapters.filter(c => !pathIds.includes(c.id) && !Engine.isImportedChapter(c.id));
+    const imported = chapters.filter(c => Engine.isImportedChapter(c.id));
+    const card = c => {
+      const n = (c.phrases || []).length;
+      const done = (c.phrases || []).filter(p => learned.has(p.id)).length;
+      const pct = n ? Math.round(done / n * 100) : 0;
+      return `
         <a class="chapter-card" href="#/chapter/${c.id}">
           <h3>${c.icon || "📄"} ${esc(c.title)}</h3>
           <p>${esc(c.sub || "")}</p>
-          <span class="tag">${(c.phrases || []).length} عبارة</span>
+          <div class="progress" style="margin:8px 0 6px"><i style="width:${pct}%"></i></div>
+          <span class="tag">${done}/${n} أتممتها</span>
           ${(c.tables || []).length ? ` <span class="tag">${c.tables.length} جدول</span>` : ""}
           ${c.guide ? ` <span class="tag">📋 دليل</span>` : ""}
-        </a>`).join("")}
-    </div>`;
+        </a>`;
+    };
+    const view = `
+    <div class="hero" style="background:linear-gradient(135deg,#7c2d12,#c2410c)">
+      <h1>🛍️ البيع والشراء والتعامل مع الزبائن</h1>
+      <p>من لحظة رؤية الزبون حتى ما بعد البيع: جذب، ترحيب، عرض، سعر، مساومة، شكوى، جملة، واتساب. كل عبارة: ماذا يقول البائع <b>فعلًا</b>، ولمن، ومتى، ولماذا هي طبيعية — لا ترجمة حرفية.</p>
+      <div class="cta"><a class="btn light" href="#/today">☀️ ابدأ درس اليوم من هنا</a></div>
+    </div>
+    <div class="section-title">🛤️ مسار البيع بالترتيب <span class="line"></span></div>
+    <p class="mini-note">اتبع الفصول من الأعلى للأسفل. كل فصل يفتح حوارات وتمارين مرتبطة به.</p>
+    <div class="grid-cards">${pathCh.map(card).join("")}</div>
+    ${extra.length ? `<div class="section-title">📚 فصول إضافية <span class="line"></span></div><div class="grid-cards">${extra.map(card).join("")}</div>` : ""}
+    ${imported.length ? `<div class="section-title">📎 مرجع أحادي اللغة (خارج البنك) <span class="line"></span></div>
+      <div class="callout warn">هذه نداءات مستوردة بلغة واحدة دون اختراع ترجمة للجانب الآخر — ليست ضمن بنك الجمل ولا الاختبارات الثنائية.</div>
+      <div class="grid-cards">${imported.map(card).join("")}</div>` : ""}`;
     $("#view").innerHTML = view;
   };
 
   /* ---------- صفحة المنهج العام (الأكاديمية) ---------- */
   Views.academy = function () {
     const chapters = DB.chapters.filter(c => c.group === "academy");
+    const core = chapters.filter(c => Engine.ACADEMY_CORE.includes(c.id));
+    const life = chapters.filter(c => (c.id || "").startsWith("life-"));
+    const imported = chapters.filter(c => Engine.isImportedChapter(c.id));
+    const rest = chapters.filter(c => !core.includes(c) && !life.includes(c) && !imported.includes(c));
     const bank = bankSorted();
-    $("#view").innerHTML = `
-    <div class="hero">
-      <h1>🎓 المنهج العام — أكاديمية الإندونيسية والتركية</h1>
-      <p>مسارك الأكاديمي الكامل خارج المحل: الضمائر والتعريف، أدوات الأسئلة، الأفعال الذهبية، الوقت، المشاعر، والمفردات الموضوعية الكبرى — ثم طبّقها في حوارات الحياة اليومية (مطعم، مواصلات، فندق، صيدلية، اتجاهات، تعارف، هاتف).</p>
-      <div class="cta">
-        <a class="btn primary" href="#/placement">🎯 اختبر مستواك الآن</a>
-        <a class="btn light" href="#/plan">🗓️ خطة 30 يومًا</a>
-      </div>
-    </div>
-    <div class="section-title">📚 فصول المنهج <span class="line"></span></div>
-    <div class="grid-cards">
-      ${chapters.map(c => `
+    const chCard = c => `
         <a class="chapter-card" href="#/chapter/${c.id}">
           <h3>${c.icon || "📄"} ${esc(c.title)}</h3>
           <p>${esc(c.sub || "")}</p>
           <span class="tag">${(c.phrases || []).length} عبارة</span>
           ${(c.tables || []).length ? ` <span class="tag">${c.tables.length} جدول</span>` : ""}
-        </a>`).join("")}
+        </a>`;
+    $("#view").innerHTML = `
+    <div class="hero">
+      <h1>🎓 المنهج العام — أكاديمية الإندونيسية والتركية</h1>
+      <p>مسارك الأكاديمي خارج المحل: الضمائر والتعريف، أدوات الأسئلة، الأفعال الذهبية، الوقت، المشاعر، والمفردات الموضوعية — ثم طبّقها في حوارات الحياة اليومية.</p>
+      <div class="cta">
+        <a class="btn primary" href="#/placement">🎯 اختبر مستواك الآن</a>
+        <a class="btn light" href="#/plan">🗓️ خطة 30 يومًا</a>
+      </div>
+    </div>
+    <div class="section-title">📚 النواة <span class="line"></span></div>
+    <div class="grid-cards">
+      ${core.map(chCard).join("")}${rest.map(chCard).join("")}
       <a class="chapter-card" href="#/basics"><h3>🔤 الأساسيات والنطق</h3><p>الحروف والنطق للمتحدث العربي + عبارات النجاة.</p></a>
       <a class="chapter-card" href="#/numbers"><h3>🔢 الأرقام والأسعار</h3><p>قراءة الأسعار كما يقرؤها الباعة فعلًا.</p></a>
     </div>
+    ${life.length ? `<div class="section-title">🌍 مكتبات الحياة <span class="line"></span></div><div class="grid-cards">${life.map(chCard).join("")}</div>` : ""}
+    ${imported.length ? `<div class="section-title">📎 موسوعة أحادية اللغة <span class="line"></span></div>
+      <div class="callout warn">عبارات مستوردة بلغة واحدة فقط (بلا اختراع ترجمة). خارج بنك الجمل والاختبارات الثنائية.</div>
+      <div class="grid-cards">${imported.map(chCard).join("")}</div>` : ""}
     <div class="section-title">🎬 حوارات الحياة اليومية <span class="line"></span></div>
     <div class="grid-cards">
       ${DB.situations.filter(s => s.kind === "daily").map(s => `
@@ -271,8 +310,12 @@ const App = (() => {
     const c = chapter(id);
     if (!c) { Views.home(); return; }
     const related = DB.situations.filter(s => (s.chapters || []).includes(c.id));
+    const g = c.group || "sales";
+    const crumb = g === "academy" ? ["#/academy", "🎓 المنهج العام"] : g === "survival" ? ["#/survival", "🆘 النجاة"] : ["#/sales", "🛍️ قسم البيع"];
+    const importedNote = Engine.isImportedChapter(c.id) ? `<div class="callout warn">مرجع أحادي اللغة — لم نختلق ترجمة للجانب الآخر. هذه العبارات خارج البنك الافتراضي.</div>` : "";
     $("#view").innerHTML = `
-      <div class="crumbs"><a href="#/sales">🛍️ قسم البيع</a> ‹ ${esc(c.title)}</div>
+      <div class="crumbs"><a href="${crumb[0]}">${crumb[1]}</a> ‹ ${esc(c.title)}</div>
+      ${importedNote}
       <div class="box">
         <h3>${c.icon || "📄"} ${esc(c.title)}</h3>
         <p style="color:var(--sub)">${esc(c.sub || "")}</p>
@@ -372,6 +415,7 @@ const App = (() => {
     <div class="box">
       <h3>الفلسفة</h3>
       <p>هذا ليس تطبيق ترجمة. الهدف أن تصل إلى: <b>«أنا أعرف ماذا أقول، وكيف أقوله، ولمن أقوله، ومتى أقوله، وكيف أقوله بطبيعية»</b>. لذلك كل عبارة مكتوبة كما يقولها المتحدث الأصلي فعلًا في الموقف — لا ترجمة حرفية من العربية — مع توثيق مستوى الرسمية ولمن تقال ومتى تتوقف.</p>
+      <p class="mini-note">التطبيق <b>مجاني بالكامل</b>: بلا اشتراك وبلا إعلانات وبلا مشتريات. كل التعلّم على جهازك.</p>
     </div>
     <div class="box">
       <h3>🗺️ خريطة الاستخدام المقترحة</h3>
@@ -410,10 +454,20 @@ const App = (() => {
     else if (act === "learn") {
       const id = b.dataset.id;
       if (learned.has(id)) { learned.delete(id); toast("أُزيلت من «أنهيتها»"); }
-      else { learned.add(id); toast("أحسنت! سُجّلت كجملة أتممتها ✓"); App.track && App.track("vocab"); }
+      else {
+        learned.add(id); toast("أحسنت! سُجّلت كجملة أتممتها ✓"); App.track && App.track("vocab");
+        const lang = settings.lang;
+        if (lang === "tr") App.langTrack && App.langTrack("tr", id);
+        else if (lang === "id") App.langTrack && App.langTrack("id", id);
+        else { App.langTrack && App.langTrack("id", id); App.langTrack && App.langTrack("tr", id); }
+      }
       saveLearned();
       const card = document.getElementById("pc-" + id);
-      if (card) { card.classList.toggle("learned", learned.has(id)); const btn = card.querySelector('[data-act="learn"]'); if (btn) btn.classList.toggle("done", learned.has(id)); }
+      if (card) {
+        card.classList.toggle("learned", learned.has(id));
+        const btn = card.querySelector('[data-act="learn"]');
+        if (btn) { btn.classList.toggle("done", learned.has(id)); btn.textContent = learned.has(id) ? "✓" : "○"; }
+      }
     }
     else if (act === "fav") {
       const id = b.dataset.id;
@@ -421,7 +475,17 @@ const App = (() => {
       saveFavs(); b.classList.toggle("faved", favs.has(id)); b.textContent = favs.has(id) ? "❤️" : "🤍";
     }
     else if (act === "export") {
-      const data = { learned: [...learned], favs: [...favs], leitner: store.get("leitner", {}), date: new Date().toISOString() };
+      const data = {
+        version: 2,
+        learned: [...learned], favs: [...favs],
+        leitner: store.get("leitner", {}),
+        mistakes: store.get("mistakes", []),
+        activity: store.get("activity", {}),
+        langprog: store.get("langprog", { id: [], tr: [] }),
+        level: store.get("level", {}),
+        settings: store.get("settings", settings),
+        date: new Date().toISOString()
+      };
       if (window.AndroidFiles) { window.AndroidFiles.saveText("gl-progress.json", JSON.stringify(data, null, 2)); toast("تم الحفظ في مجلد التطبيق ✅"); return; }
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "gl-progress.json"; a.click();
@@ -434,9 +498,18 @@ const App = (() => {
         const r = new FileReader();
         r.onload = () => { try {
           const d = JSON.parse(r.result);
-          learned = new Set([...learned, ...(d.learned || [])]); favs = new Set([...favs, ...(d.favs || [])]);
+          replaceSet(learned, [...learned, ...(d.learned || [])]);
+          replaceSet(favs, [...favs, ...(d.favs || [])]);
           saveLearned(); saveFavs();
           if (d.leitner) store.set("leitner", { ...store.get("leitner", {}), ...d.leitner });
+          if (Array.isArray(d.mistakes)) store.set("mistakes", d.mistakes);
+          if (d.activity && typeof d.activity === "object") store.set("activity", { ...store.get("activity", {}), ...d.activity });
+          if (d.langprog) store.set("langprog", d.langprog);
+          if (d.level) store.set("level", d.level);
+          if (d.settings && typeof d.settings === "object") {
+            Object.assign(settings, d.settings);
+            store.set("settings", settings);
+          }
           toast("تم الاستيراد بنجاح ✅"); Views.settings();
         } catch (err) { toast("ملف غير صالح"); } };
         r.readAsText(f);
@@ -444,8 +517,10 @@ const App = (() => {
       inp.click();
     }
     else if (act === "reset") {
-      if (confirm("هل تريد فعلًا حذف كل التقدم (الجمل المنها، المفضلة، صناديق الحفظ)؟")) {
-        learned = new Set(); favs = new Set(); store.set("leitner", {});
+      if (confirm("هل تريد فعلًا حذف كل التقدم (الجمل المنها، المفضلة، صناديق الحفظ، الأخطاء، النشاط)؟")) {
+        replaceSet(learned, []); replaceSet(favs, []);
+        store.set("leitner", {}); store.set("mistakes", []); store.set("activity", {});
+        store.set("langprog", { id: [], tr: [] }); store.set("level", {});
         saveLearned(); saveFavs(); toast("تم التصفير"); Views.settings();
       }
     }
@@ -469,8 +544,10 @@ const App = (() => {
     document.querySelectorAll("#langToggle button").forEach(x => x.classList.toggle("on", x.dataset.lang === settings.lang));
     $("#burger").addEventListener("click", () => { $("#drawer").classList.add("open"); $("#scrim").classList.add("show"); });
     $("#scrim").addEventListener("click", () => { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("show"); });
-    $("#drawerChapters").innerHTML = DB.chapters.filter(c => (c.group || "sales") === "sales").map(c => `<a class="sub" href="#/chapter/${c.id}">${c.icon || "📄"} ${esc(c.title)}</a>`).join("");
-    $("#drawerAcademy").innerHTML = DB.chapters.filter(c => c.group === "academy").map(c => `<a class="sub" href="#/chapter/${c.id}">${c.icon || "📄"} ${esc(c.title)}</a>`).join("");
+    $("#drawerChapters").innerHTML = DB.chapters.filter(c => (c.group || "sales") === "sales" && !Engine.isImportedChapter(c.id)).map(c => `<a class="sub" href="#/chapter/${c.id}">${c.icon || "📄"} ${esc(c.title)}</a>`).join("");
+    $("#drawerAcademy").innerHTML = DB.chapters.filter(c => c.group === "academy" && !Engine.isImportedChapter(c.id)).map(c => `<a class="sub" href="#/chapter/${c.id}">${c.icon || "📄"} ${esc(c.title)}</a>`).join("");
+    const extra = document.getElementById("drawerExtra");
+    if (extra) extra.innerHTML = DB.chapters.filter(c => Engine.isImportedChapter(c.id)).map(c => `<a class="sub" href="#/chapter/${c.id}">${c.icon || "📄"} ${esc(c.title)}</a>`).join("");
   }
 
   /* ---------- تشغيل ---------- */

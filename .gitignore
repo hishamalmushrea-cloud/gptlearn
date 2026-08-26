@@ -1,0 +1,16 @@
+.DS_Store
+*.log
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/src/main/assets/index.html
+android/app/src/main/assets/manifest.json
+android/app/src/main/assets/sw.js
+android/app/src/main/assets/css/
+android/app/src/main/assets/js/
+android/app/src/main/assets/data/
+android/app/src/main/assets/icons/
+node_modules/
+.idea/
+*.iml

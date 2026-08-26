@@ -34,6 +34,7 @@
 <aside class="drawer" id="drawer">
   <div class="dhead">🛍️ سوق اللغة</div>
   <nav id="drawerNav">
+    <a href="#/today">☀️ ماذا أتعلم اليوم؟</a>
     <a href="#/home">🏠 الرئيسية</a>
     <a href="#/academy">🎓 المنهج العام (الأكاديمية)</a>
     <a href="#/sales">🛍️ البيع والشراء والزبائن</a>
@@ -42,6 +43,8 @@
     <div id="drawerChapters"></div>
     <div class="sect">فصول المنهج العام</div>
     <div id="drawerAcademy"></div>
+    <div class="sect">مرجع إضافي (لغة واحدة)</div>
+    <div id="drawerExtra"></div>
     <div class="sect">التدريب والأدوات</div>
     <a href="#/situations">🎬 المواقف الكاملة</a>
     <a href="#/bank">⭐ بنك الجمل الجاهزة</a>
@@ -71,7 +74,7 @@
 <main id="view" class="wrap"></main>
 
 <nav class="bottom-nav" id="bottomNav">
-  <a href="#/home" data-nav="home"><span class="i">🏠</span>الرئيسية</a>
+  <a href="#/today" data-nav="today"><span class="i">☀️</span>اليوم</a>
   <a href="#/sales" data-nav="sales"><span class="i">🛍️</span>البيع</a>
   <a href="#/bank" data-nav="bank"><span class="i">⭐</span>الجمل</a>
   <a href="#/train" data-nav="train"><span class="i">🎭</span>التدريب</a>
@@ -113,6 +116,7 @@
 <script src="data/grammar/verbs.js"></script>
 <script src="data/core/imported_learn.js"></script>
 <!-- ===== منطق التطبيق ===== -->
+<script src="js/engine.js"></script>
 <script src="js/app.js"></script>
 <script src="js/views.js"></script>
 <script src="js/extras.js"></script>
