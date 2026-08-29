@@ -43,3 +43,13 @@ data class Story(val id: String, val title: String, val level: Cefr, val lang: T
 data class VerbCard(val id: String, val lang: TargetLang, val infinitive: String, val meaning: String, val forms: Map<String, String>, val example: String)
 data class ReviewCard(val itemId: String, val kind: String, val box: Int, val dueAt: Long, val lapses: Int, val reps: Int)
 data class NativeChapter(val id: String, val title: String, val group: String, val phrases: List<Phrase>)
+data class NativeTrainer(
+    val id: String, val title: String, val scenario: String, val lang: TargetLang,
+    val role: String, val turns: List<NativeTrainerTurn>,
+)
+data class NativeTrainerTurn(
+    val contextArabic: String, val contextId: String, val contextTr: String,
+    val ask: String, val acceptedId: List<String>, val acceptedTr: List<String>,
+    val keysId: List<String>, val keysTr: List<String>, val model: String,
+    val modelPhonetic: String, val hint: String, val why: String,
+)

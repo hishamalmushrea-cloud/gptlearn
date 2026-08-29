@@ -27,6 +27,7 @@ class AcademyViewModel(app: Application) : AndroidViewModel(app) {
     val stories get() = SeedContent.stories
     val verbs get() = SeedContent.verbs
     val analyses get() = FullAnalyses.all
+    val nativeTrainers get() = FullTrainers.all
     val nativeChapters: List<NativeChapter> by lazy {
         phrases.groupBy { it.topic }.mapIndexed { index, (topic, items) ->
             val parts = topic.split("|", limit = 2)

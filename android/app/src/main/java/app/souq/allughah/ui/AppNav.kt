@@ -45,6 +45,10 @@ fun AcademyRoot(vm: AcademyViewModel) {
                 NativeChapterScreen(vm, entry.arguments?.getString("id")?.toIntOrNull() ?: 0)
             }
             composable("review") { ReviewScreen(vm) }
+            composable("trainer/{id}") { entry ->
+                NativeTrainerScreen(vm, entry.arguments?.getString("id").orEmpty())
+            }
+            composable("trainers") { NativeTrainerListScreen(vm, nav) }
             composable("search") { SearchScreen(vm) }
             composable("more") { MoreScreen(vm, nav) }
             composable("vocab") { VocabScreen(vm) }
@@ -246,6 +250,67 @@ fun NativeChapterScreen(vm: AcademyViewModel, index: Int) {
 }
 
 @Composable
+fun NativeTrainerListScreen(vm: AcademyViewModel, nav: NavHostController) {
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("التدريب التفاعلي", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text("اختر دورك واكتب الرد باللغة الهدف. لا توجد درجات وهمية.", modifier = Modifier.padding(vertical = 6.dp))
+        vm.nativeTrainers.forEach { trainer ->
+            Card(Modifier.fillMaxWidth().padding(vertical = 5.dp).clickable { nav.navigate("trainer/${trainer.id}") }) {
+                Column(Modifier.padding(14.dp)) {
+                    Text(trainer.title, fontWeight = FontWeight.Bold)
+                    Text(trainer.scenario)
+                    Text("${trainer.lang.arName} · ${trainer.turns.size} جولات · ${if (trainer.role == "seller") "دور البائع" else "دور الزبون"}")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NativeTrainerScreen(vm: AcademyViewModel, trainerId: String) {
+    val trainer = vm.nativeTrainers.firstOrNull { it.id == trainerId }
+    if (trainer == null) {
+        Text("السيناريو غير موجود", modifier = Modifier.padding(16.dp))
+        return
+    }
+    var index by remember(trainerId) { mutableIntStateOf(0) }
+    var answer by remember(trainerId, index) { mutableStateOf("") }
+    var feedback by remember(trainerId, index) { mutableStateOf<String?>(null) }
+    val turn = trainer.turns.getOrNull(index)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text(trainer.title, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text(trainer.scenario, modifier = Modifier.padding(vertical = 6.dp))
+        Text("الجولة ${index + 1} من ${trainer.turns.size}", style = MaterialTheme.typography.labelLarge)
+        if (turn != null) {
+            if (turn.contextArabic.isNotBlank()) Text("الطرف الآخر: ${turn.contextArabic}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
+            if (turn.contextId.isNotBlank() && trainer.lang == TargetLang.ID) Text(turn.contextId, style = TextStyle(textDirection = TextDirection.Ltr, fontSize = 18.sp))
+            if (turn.contextTr.isNotBlank() && trainer.lang == TargetLang.TR) Text(turn.contextTr, style = TextStyle(textDirection = TextDirection.Ltr, fontSize = 18.sp))
+            Card(Modifier.fillMaxWidth().padding(vertical = 10.dp)) { Text(turn.ask, Modifier.padding(14.dp)) }
+            OutlinedTextField(answer, { if (feedback == null) answer = it }, label = { Text("اكتب ردك بـ${trainer.lang.arName}") }, modifier = Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                Button(enabled = feedback == null && answer.isNotBlank(), onClick = {
+                    val expected = if (trainer.lang == TargetLang.ID) turn.acceptedId else turn.acceptedTr
+                    val normalized = SearchIndex.normalize(answer)
+                    val exact = expected.any { SearchIndex.normalize(it) == normalized }
+                    val keys = if (trainer.lang == TargetLang.ID) turn.keysId else turn.keysTr
+                    val keyHits = keys.count { normalized.contains(SearchIndex.normalize(it)) }
+                    val good = exact || (keys.isNotEmpty() && keyHits.toFloat() / keys.size >= .5f)
+                    if (!good) vm.markWeak("speaking")
+                    if (!good) vm.addForgot("تدريب: ${turn.ask} — النموذج: ${turn.model}")
+                    feedback = if (good) "إجابة جيدة ✅\n${turn.why}" else "راجع النموذج:\n${turn.model}\n${turn.why}"
+                }) { Text("قيّم الإجابة") }
+                if (feedback != null) Button(onClick = { index++; answer = ""; feedback = null }, enabled = index + 1 < trainer.turns.size) { Text("التالي") }
+            }
+            feedback?.let { Text(it, modifier = Modifier.padding(top = 12.dp)) }
+            if (turn.hint.isNotBlank()) Text("تلميح: ${turn.hint}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+            Button(onClick = { vm.speak(turn.model, trainer.lang, true) }, modifier = Modifier.padding(top = 8.dp)) { Text("🔊 اسمع النموذج ببطء") }
+        } else {
+            Text("انتهى السيناريو ✅")
+        }
+    }
+}
+
+@Composable
 fun VocabScreen(vm: AcademyViewModel) {
     val lang = vm.activeLang()
     val s by vm.snapshot.collectAsState()
@@ -428,6 +493,7 @@ fun MoreScreen(vm: AcademyViewModel, nav: NavHostController) {
             "قاموس" to "dict",
             "ثقافة" to "culture",
             "تمثيل أدوار" to "role",
+            "تدريب تفاعلي كامل" to "trainers",
             "قارن اللغتين" to "compare",
             "قصص" to "stories",
             "مدرب الأفعال" to "verbs",
