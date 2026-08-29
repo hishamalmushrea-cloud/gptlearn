@@ -3,16 +3,17 @@ package app.souq.allughah.data
 import app.souq.allughah.domain.*
 
 object SeedContent {
-    val words: List<Word> = idWords() + trWords()
-    val phrases: List<Phrase> = salesPhrases() + lifePhrases() + survivalPhrases()
-    val dialogues: List<Dialogue> = dialogues()
-    val grammar: List<GrammarRule> = grammar()
-    val culture: List<CulturalNote> = culture()
+    // المصدر Native الكامل. الدوال القديمة أسفل الملف تبقى كعينات مرجعية للتدريب القصير.
+    val words: List<Word> = FullAcademyContent.words
+    val phrases: List<Phrase> = FullContent.phrases + salesPhrases() + lifePhrases() + survivalPhrases()
+    val dialogues: List<Dialogue> = FullAcademyContent.dialogues
+    val grammar: List<GrammarRule> = FullAcademyContent.grammar
+    val culture: List<CulturalNote> = FullAcademyContent.culture
     val lessons: List<Lesson> = lessons()
     val scenarios: List<Scenario> = scenarios()
     val quizzes: List<QuizItem> = quizzes()
-    val stories: List<Story> = stories()
-    val verbs: List<VerbCard> = verbs()
+    val stories: List<Story> = FullAcademyContent.stories
+    val verbs: List<VerbCard> = FullAcademyContent.verbs
 
     private fun w(
         id: String, lang: TargetLang, lemma: String, ph: String, ar: String, pos: String,

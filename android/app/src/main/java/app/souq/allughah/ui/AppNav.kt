@@ -239,10 +239,26 @@ fun VocabScreen(vm: AcademyViewModel) {
 fun PhraseList(vm: AcademyViewModel, vararg topics: String) {
     val s by vm.snapshot.collectAsState()
     val lang = vm.activeLang()
-    val list = vm.phrases.filter { it.topic in topics }
+    val list = vm.phrases.filter { phraseMatchesTopic(it, topics.toSet()) }
     LazyColumn(Modifier.padding(16.dp)) {
+        item {
+            Text("${list.size} عبارة أوفلاين", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
+        }
         items(list, key = { it.id }) { p -> PhraseCard(p, vm, s.hideArabic, lang) }
     }
+}
+
+private fun phraseMatchesTopic(p: Phrase, requested: Set<String>): Boolean {
+    if (p.topic in requested) return true
+    val parts = p.topic.split("|", limit = 2)
+    if (parts.size < 2) return false
+    val group = parts[0]
+    val title = parts[1]
+    if (requested.contains("بيع") && group == "sales") return true
+    if (requested.contains("سفر") && (title.contains("سفر") || title.contains("مطار") || title.contains("فندق") || title.contains("تاكسي") || title.contains("طريق"))) return true
+    if (requested.contains("مطعم") && (title.contains("طعام") || title.contains("مطعم"))) return true
+    if (requested.contains("عمل") && (title.contains("عمل") || title.contains("مهن") || title.contains("تجارة"))) return true
+    return requested.any { title.contains(it) }
 }
 
 @Composable
