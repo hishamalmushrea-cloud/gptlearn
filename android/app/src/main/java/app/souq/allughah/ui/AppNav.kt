@@ -58,6 +58,7 @@ fun AcademyRoot(vm: AcademyViewModel) {
             composable("sales") { PhraseList(vm, "بيع", "تفاوض", "ترحيب بيع", "عرض", "عملاء", "إغلاق بيع", "دفع", "عرض منتج", "سعر", "خدمة") }
             composable("dict") { DictScreen(vm) }
             composable("progress") { ProgressScreen(vm) }
+            composable("mistakes") { MistakesScreen(vm, nav) }
             composable("settings") { SettingsScreen(vm) }
             composable("culture") { CultureScreen(vm) }
             composable("role") { RoleScreen(vm) }
@@ -502,6 +503,7 @@ fun MoreScreen(vm: AcademyViewModel, nav: NavHostController) {
             "تحديد مستوى" to "placement",
             "خطة 30 يومًا" to "plan",
             "حروف تركية" to "letters",
+            "أخطائي" to "mistakes",
             "تقدمي" to "progress",
             "إعدادات" to "settings",
         ).forEach { (t, r) ->
@@ -514,6 +516,50 @@ fun MoreScreen(vm: AcademyViewModel, nav: NavHostController) {
 @Composable
 fun DictScreen(vm: AcademyViewModel) {
     VocabScreen(vm)
+}
+
+@Composable
+fun MistakesScreen(vm: AcademyViewModel, nav: NavHostController) {
+    val weak = vm.weakMap()
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("أخطائي", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text("هذه ليست عقوبة؛ إنها قائمة بما يستحق جلسة إضافية.", modifier = Modifier.padding(vertical = 6.dp))
+        if (weak.isEmpty()) {
+            Text("لا توجد أخطاء مسجلة بعد. جرّب التدريب أو القصص أو الكتابة.")
+        } else {
+            weak.entries.sortedByDescending { it.value }.forEach { (skill, count) ->
+                Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    ListItem(
+                        headlineContent = { Text(skillLabel(skill)) },
+                        supportingContent = { Text("محاولات تحتاج مراجعة: $count") },
+                        trailingContent = { TextButton(onClick = { nav.navigate(skillRoute(skill)) }) { Text("تدرّب") } }
+                    )
+                }
+            }
+            OutlinedButton(onClick = { vm.clearWeak() }, modifier = Modifier.padding(top = 8.dp)) { Text("مسح سجل نقاط الضعف") }
+        }
+        Text("نصيحة: أعد نفس الموقف بعد مراجعة النموذج، ولا تنتقل إلى محتوى جديد إذا تراكمت الأخطاء.", modifier = Modifier.padding(top = 14.dp))
+    }
+}
+
+private fun skillLabel(skill: String) = when (skill) {
+    "reading" -> "📖 القراءة وفهم القصص"
+    "listening" -> "🎧 الاستماع"
+    "writing" -> "✍️ الكتابة"
+    "grammar" -> "🧩 القواعد"
+    "speaking" -> "🎭 التحدث والتدريب"
+    "vocab" -> "📚 المفردات"
+    else -> skill
+}
+
+private fun skillRoute(skill: String) = when (skill) {
+    "reading" -> "stories"
+    "listening" -> "shadow"
+    "writing" -> "learn"
+    "grammar" -> "grammar"
+    "speaking" -> "trainers"
+    "vocab" -> "vocab"
+    else -> "review"
 }
 
 @Composable

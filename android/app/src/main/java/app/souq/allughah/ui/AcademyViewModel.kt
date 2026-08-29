@@ -105,6 +105,8 @@ class AcademyViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun clearWeak() = viewModelScope.launch { store.setWeak("") }
+
     fun weakMap(): Map<String, Int> =
         snapshot.value.weakRaw.split(",").filter { it.isNotBlank() }.groupingBy { it }.eachCount()
 
