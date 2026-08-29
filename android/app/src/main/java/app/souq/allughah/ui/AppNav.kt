@@ -41,6 +41,9 @@ fun AcademyRoot(vm: AcademyViewModel) {
         NavHost(nav, startDestination = "home", modifier = Modifier.padding(pad)) {
             composable("home") { Home(vm, nav) }
             composable("learn") { LearnHub(vm, nav) }
+            composable("chapter/{id}") { entry ->
+                NativeChapterScreen(vm, entry.arguments?.getString("id")?.toIntOrNull() ?: 0)
+            }
             composable("review") { ReviewScreen(vm) }
             composable("search") { SearchScreen(vm) }
             composable("more") { MoreScreen(vm, nav) }
@@ -206,8 +209,39 @@ fun LearnHub(vm: AcademyViewModel, nav: NavHostController) {
                 }
             }
         }
+        Text("فصول المحتوى Native", fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(top = 18.dp))
+        Text("كل عبارة ثنائية اللغة متاحة أوفلاين داخل فصولها.")
+        vm.nativeChapters.forEachIndexed { index, chapter ->
+            Card(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { nav.navigate("chapter/$index") }
+            ) {
+                Column(Modifier.padding(14.dp)) {
+                    Text(chapter.title, fontWeight = FontWeight.Bold)
+                    Text("${chapter.phrases.size} عبارة · ${if (chapter.group == "sales") "بيع" else if (chapter.group == "survival") "نجاة" else "أكاديمية وحياة"}")
+                }
+            }
+        }
         Text("وحدات قصيرة 5–15 دقيقة. دروس أطول في المسار المهني بعد B1.", modifier = Modifier.padding(top = 12.dp))
         Button(onClick = { nav.navigate("vocab") }) { Text("المفردات") }
+    }
+}
+
+@Composable
+fun NativeChapterScreen(vm: AcademyViewModel, index: Int) {
+    val s by vm.snapshot.collectAsState()
+    val chapter = vm.nativeChapters.getOrNull(index)
+    if (chapter == null) {
+        Text("الفصل غير موجود", modifier = Modifier.padding(16.dp))
+        return
+    }
+    LazyColumn(Modifier.padding(16.dp)) {
+        item {
+            Text(chapter.title, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+            Text("${chapter.phrases.size} عبارة · يعمل دون اتصال", modifier = Modifier.padding(bottom = 8.dp))
+        }
+        items(chapter.phrases, key = { it.id }) { phrase ->
+            PhraseCard(phrase, vm, s.hideArabic, vm.activeLang())
+        }
     }
 }
 

@@ -122,3 +122,10 @@ data class ReviewCard(
     val lapses: Int,
     val reps: Int,
 )
+
+data class NativeChapter(
+    val id: String,
+    val title: String,
+    val group: String,
+    val phrases: List<Phrase>,
+)
