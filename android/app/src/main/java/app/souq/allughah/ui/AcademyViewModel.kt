@@ -7,8 +7,6 @@ import app.souq.allughah.audio.TtsPlayer
 import app.souq.allughah.data.SeedContent
 import app.souq.allughah.data.UserStore
 import app.souq.allughah.domain.*
-import app.souq.allughah.domain.Sm2Scheduler
-import app.souq.allughah.domain.Sm2State
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -56,7 +54,9 @@ class AcademyViewModel(app: Application) : AndroidViewModel(app) {
         snapshot.value.srsRaw.split(";").filter { it.isNotBlank() }.forEach { row ->
             val p = row.split("|")
             if (p.size >= 6) {
-                map[p[0]] = ReviewCard(p[0], p[1], p[2].toInt(), p[3].toLong(), p[4].toInt(), p[5].toInt())
+                runCatching {
+                    map[p[0]] = ReviewCard(p[0], p[1], p[2].toInt().coerceIn(0, 5), p[3].toLong(), p[4].toInt().coerceAtLeast(0), p[5].toInt().coerceAtLeast(0))
+                }
             }
         }
         return map
@@ -73,11 +73,9 @@ class AcademyViewModel(app: Application) : AndroidViewModel(app) {
         val now = System.currentTimeMillis()
         val map = parseSrs()
         val cur = map[id] ?: ReviewCard(id, kind, 0, now, 0, 0)
-        val sm = Sm2Scheduler.schedule(
-            Sm2State(id, kind, snapshot.value.activeLang, cur.reps, cur.box, 2.5, cur.dueAt, cur.lapses, cur.reps, (cur.reps - cur.lapses).coerceAtLeast(0)),
-            g, now
-        )
-        map[id] = ReviewCard(id, kind, sm.intervalDays.coerceAtMost(5), sm.dueAt, sm.lapses, sm.repetitions)
+        // مصدر الحقيقة في APK هو Leitner Native: box يبقى حالة 0..5،
+        // وليس عدد أيام. كان تحويل intervalDays إلى box يرفع البطاقة خطأً إلى المتقنة.
+        map[id] = LearningEngine.applyGrade(cur, g, now)
         saveSrs(map)
         viewModelScope.launch {
             store.addXp(snapshot.value.activeLang, if (g == SrsGrade.Again) 1 else 4)
