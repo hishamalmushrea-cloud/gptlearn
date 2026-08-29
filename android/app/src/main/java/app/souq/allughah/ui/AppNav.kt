@@ -532,14 +532,26 @@ fun RoleScreen(vm: AcademyViewModel) {
 @Composable
 fun CompareScreen(vm: AcademyViewModel) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("قارن اللغات — مفيد لوضع الازدواج", fontWeight = FontWeight.Bold)
-        vm.phrases.take(8).forEach { p ->
+        Text("قارن اللغات", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text("30 تحليلًا يشرح الفرق بين الترجمة الحرفية وما يقوله البائع فعلًا.", modifier = Modifier.padding(vertical = 6.dp))
+        vm.analyses.forEach { a ->
             Card(Modifier.padding(vertical = 6.dp).fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
-                    Text("ع: ${p.arabic}")
-                    Text("🇮🇩 ${p.idText}", style = TextStyle(textDirection = TextDirection.Ltr))
-                    Text("🇹🇷 ${p.trText}", style = TextStyle(textDirection = TextDirection.Ltr))
-                    Text("ملاحظة ترتيب الكلمات: الإندونيسية SVO بلا تصريف؛ التركية SOV بلواحق.")
+                    Text("عربي: ${a.arabic}", fontWeight = FontWeight.Bold)
+                    Text("🇮🇩 ${a.idText}", style = TextStyle(textDirection = TextDirection.Ltr, fontSize = 18.sp))
+                    Text("حرفيًا: ${a.idLiteral}")
+                    Text("النطق: ${a.idSound}")
+                    Text("متى: ${a.idWhen}")
+                    Text("طبيعية: ${a.idNatural}")
+                    if (a.idBetter.isNotBlank()) Text("البديل الأفضل: ${a.idBetter}")
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    Text("🇹🇷 ${a.trText}", style = TextStyle(textDirection = TextDirection.Ltr, fontSize = 18.sp))
+                    Text("حرفيًا: ${a.trLiteral}")
+                    Text("النطق: ${a.trSound}")
+                    Text("متى: ${a.trWhen}")
+                    Text("طبيعية: ${a.trNatural}")
+                    if (a.trBetter.isNotBlank()) Text("البديل الأفضل: ${a.trBetter}")
+                    if (a.expertNote.isNotBlank()) Text("ملاحظة الخبير: ${a.expertNote}", modifier = Modifier.padding(top = 8.dp))
                 }
             }
         }
