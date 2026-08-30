@@ -48,20 +48,3 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
-
-val copyWebAssets by tasks.registering(Copy::class) {
-    val repoRoot = rootProject.projectDir.parentFile
-    into(layout.projectDirectory.dir("src/main/assets"))
-    from(repoRoot) {
-        include("index.html", "manifest.json", "sw.js")
-    }
-    from(repoRoot.resolve("css")) { into("css") }
-    from(repoRoot.resolve("js")) { into("js") }
-    from(repoRoot.resolve("data")) { into("data") }
-    from(repoRoot.resolve("icons")) { into("icons") }
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-}
-
-afterEvaluate {
-    tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(copyWebAssets) }
-}
