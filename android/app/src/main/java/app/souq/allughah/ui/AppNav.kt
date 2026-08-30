@@ -41,7 +41,14 @@ fun AcademyRoot(vm: AcademyViewModel) {
         NavHost(nav, startDestination = "home", modifier = Modifier.padding(pad)) {
             composable("home") { Home(vm, nav) }
             composable("learn") { LearnHub(vm, nav) }
+            composable("chapter/{id}") { entry ->
+                NativeChapterScreen(vm, entry.arguments?.getString("id")?.toIntOrNull() ?: 0)
+            }
             composable("review") { ReviewScreen(vm) }
+            composable("trainer/{id}") { entry ->
+                NativeTrainerScreen(vm, entry.arguments?.getString("id").orEmpty())
+            }
+            composable("trainers") { NativeTrainerListScreen(vm, nav) }
             composable("search") { SearchScreen(vm) }
             composable("more") { MoreScreen(vm, nav) }
             composable("vocab") { VocabScreen(vm) }
@@ -51,6 +58,7 @@ fun AcademyRoot(vm: AcademyViewModel) {
             composable("sales") { PhraseList(vm, "بيع", "تفاوض", "ترحيب بيع", "عرض", "عملاء", "إغلاق بيع", "دفع", "عرض منتج", "سعر", "خدمة") }
             composable("dict") { DictScreen(vm) }
             composable("progress") { ProgressScreen(vm) }
+            composable("mistakes") { MistakesScreen(vm, nav) }
             composable("settings") { SettingsScreen(vm) }
             composable("culture") { CultureScreen(vm) }
             composable("role") { RoleScreen(vm) }
@@ -62,6 +70,7 @@ fun AcademyRoot(vm: AcademyViewModel) {
             composable("five") { FiveMin(vm) }
             composable("forgot") { ForgotInbox(vm) }
             composable("placement") { Placement(vm) }
+            composable("plan") { NativePlanScreen(vm, nav) }
             composable("shadow") { ShadowScreen(vm) }
             composable("letters") { LetterTrainer() }
             composable("chat") { PhraseList(vm, "دردشة") }
@@ -206,8 +215,100 @@ fun LearnHub(vm: AcademyViewModel, nav: NavHostController) {
                 }
             }
         }
+        Text("فصول المحتوى Native", fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(top = 18.dp))
+        Text("كل عبارة ثنائية اللغة متاحة أوفلاين داخل فصولها.")
+        vm.nativeChapters.forEachIndexed { index, chapter ->
+            Card(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { nav.navigate("chapter/$index") }
+            ) {
+                Column(Modifier.padding(14.dp)) {
+                    Text(chapter.title, fontWeight = FontWeight.Bold)
+                    Text("${chapter.phrases.size} عبارة · ${if (chapter.group == "sales") "بيع" else if (chapter.group == "survival") "نجاة" else "أكاديمية وحياة"}")
+                }
+            }
+        }
         Text("وحدات قصيرة 5–15 دقيقة. دروس أطول في المسار المهني بعد B1.", modifier = Modifier.padding(top = 12.dp))
         Button(onClick = { nav.navigate("vocab") }) { Text("المفردات") }
+    }
+}
+
+@Composable
+fun NativeChapterScreen(vm: AcademyViewModel, index: Int) {
+    val s by vm.snapshot.collectAsState()
+    val chapter = vm.nativeChapters.getOrNull(index)
+    if (chapter == null) {
+        Text("الفصل غير موجود", modifier = Modifier.padding(16.dp))
+        return
+    }
+    LazyColumn(Modifier.padding(16.dp)) {
+        item {
+            Text(chapter.title, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+            Text("${chapter.phrases.size} عبارة · يعمل دون اتصال", modifier = Modifier.padding(bottom = 8.dp))
+        }
+        items(chapter.phrases, key = { it.id }) { phrase ->
+            PhraseCard(phrase, vm, s.hideArabic, vm.activeLang())
+        }
+    }
+}
+
+@Composable
+fun NativeTrainerListScreen(vm: AcademyViewModel, nav: NavHostController) {
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("التدريب التفاعلي", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text("اختر دورك واكتب الرد باللغة الهدف. لا توجد درجات وهمية.", modifier = Modifier.padding(vertical = 6.dp))
+        vm.nativeTrainers.forEach { trainer ->
+            Card(Modifier.fillMaxWidth().padding(vertical = 5.dp).clickable { nav.navigate("trainer/${trainer.id}") }) {
+                Column(Modifier.padding(14.dp)) {
+                    Text(trainer.title, fontWeight = FontWeight.Bold)
+                    Text(trainer.scenario)
+                    Text("${trainer.lang.arName} · ${trainer.turns.size} جولات · ${if (trainer.role == "seller") "دور البائع" else "دور الزبون"}")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NativeTrainerScreen(vm: AcademyViewModel, trainerId: String) {
+    val trainer = vm.nativeTrainers.firstOrNull { it.id == trainerId }
+    if (trainer == null) {
+        Text("السيناريو غير موجود", modifier = Modifier.padding(16.dp))
+        return
+    }
+    var index by remember(trainerId) { mutableIntStateOf(0) }
+    var answer by remember(trainerId, index) { mutableStateOf("") }
+    var feedback by remember(trainerId, index) { mutableStateOf<String?>(null) }
+    val turn = trainer.turns.getOrNull(index)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text(trainer.title, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text(trainer.scenario, modifier = Modifier.padding(vertical = 6.dp))
+        Text("الجولة ${index + 1} من ${trainer.turns.size}", style = MaterialTheme.typography.labelLarge)
+        if (turn != null) {
+            if (turn.contextArabic.isNotBlank()) Text("الطرف الآخر: ${turn.contextArabic}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
+            if (turn.contextId.isNotBlank() && trainer.lang == TargetLang.ID) Text(turn.contextId, style = TextStyle(textDirection = TextDirection.Ltr, fontSize = 18.sp))
+            if (turn.contextTr.isNotBlank() && trainer.lang == TargetLang.TR) Text(turn.contextTr, style = TextStyle(textDirection = TextDirection.Ltr, fontSize = 18.sp))
+            Card(Modifier.fillMaxWidth().padding(vertical = 10.dp)) { Text(turn.ask, Modifier.padding(14.dp)) }
+            OutlinedTextField(answer, { if (feedback == null) answer = it }, label = { Text("اكتب ردك بـ${trainer.lang.arName}") }, modifier = Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                Button(enabled = feedback == null && answer.isNotBlank(), onClick = {
+                    val expected = if (trainer.lang == TargetLang.ID) turn.acceptedId else turn.acceptedTr
+                    val normalized = SearchIndex.normalize(answer)
+                    val exact = expected.any { SearchIndex.normalize(it) == normalized }
+                    val keys = if (trainer.lang == TargetLang.ID) turn.keysId else turn.keysTr
+                    val keyHits = keys.count { normalized.contains(SearchIndex.normalize(it)) }
+                    val good = exact || (keys.isNotEmpty() && keyHits.toFloat() / keys.size >= .5f)
+                    if (!good) vm.markWeak("speaking")
+                    if (!good) vm.addForgot("تدريب: ${turn.ask} — النموذج: ${turn.model}")
+                    feedback = if (good) "إجابة جيدة ✅\n${turn.why}" else "راجع النموذج:\n${turn.model}\n${turn.why}"
+                }) { Text("قيّم الإجابة") }
+                if (feedback != null) Button(onClick = { index++; answer = ""; feedback = null }, enabled = index + 1 < trainer.turns.size) { Text("التالي") }
+            }
+            feedback?.let { Text(it, modifier = Modifier.padding(top = 12.dp)) }
+            if (turn.hint.isNotBlank()) Text("تلميح: ${turn.hint}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+            Button(onClick = { vm.speak(turn.model, trainer.lang, true) }, modifier = Modifier.padding(top = 8.dp)) { Text("🔊 اسمع النموذج ببطء") }
+        } else {
+            Text("انتهى السيناريو ✅")
+        }
     }
 }
 
@@ -227,7 +328,7 @@ fun VocabScreen(vm: AcademyViewModel) {
                         IconButton(onClick = { vm.speak(w.lemma, lang, false) }) { Icon(Icons.Default.VolumeUp, null) }
                         IconButton(onClick = { vm.speak(w.lemma, lang, true) }) { Icon(Icons.Default.SlowMotionVideo, null) }
                         IconButton(onClick = { vm.toggleFav(w.id) }) { Icon(if (s.favs.contains(w.id)) Icons.Default.Star else Icons.Default.StarBorder, null) }
-                        TextButton(onClick = { vm.grade(w.id, "vocab", SrsGrade.Good) }) { Text("أعرفها") }
+                        TextButton(onClick = { vm.grade(w.id, "vocab", SrsGrade.Good, lang, "forward") }) { Text("أعرفها") }
                     }
                 }
             }
@@ -239,10 +340,26 @@ fun VocabScreen(vm: AcademyViewModel) {
 fun PhraseList(vm: AcademyViewModel, vararg topics: String) {
     val s by vm.snapshot.collectAsState()
     val lang = vm.activeLang()
-    val list = vm.phrases.filter { it.topic in topics }
+    val list = vm.phrases.filter { phraseMatchesTopic(it, topics.toSet()) }
     LazyColumn(Modifier.padding(16.dp)) {
+        item {
+            Text("${list.size} عبارة أوفلاين", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
+        }
         items(list, key = { it.id }) { p -> PhraseCard(p, vm, s.hideArabic, lang) }
     }
+}
+
+private fun phraseMatchesTopic(p: Phrase, requested: Set<String>): Boolean {
+    if (p.topic in requested) return true
+    val parts = p.topic.split("|", limit = 2)
+    if (parts.size < 2) return false
+    val group = parts[0]
+    val title = parts[1]
+    if (requested.contains("بيع") && group == "sales") return true
+    if (requested.contains("سفر") && (title.contains("سفر") || title.contains("مطار") || title.contains("فندق") || title.contains("تاكسي") || title.contains("طريق"))) return true
+    if (requested.contains("مطعم") && (title.contains("طعام") || title.contains("مطعم"))) return true
+    if (requested.contains("عمل") && (title.contains("عمل") || title.contains("مهن") || title.contains("تجارة"))) return true
+    return requested.any { title.contains(it) }
 }
 
 @Composable
@@ -269,7 +386,8 @@ fun PhraseCard(p: Phrase, vm: AcademyViewModel, hideAr: Boolean, lang: TargetLan
                 IconButton(onClick = { vm.speak(txt, lang, false) }) { Icon(Icons.Default.VolumeUp, null) }
                 IconButton(onClick = { vm.speak(txt, lang, true) }) { Icon(Icons.Default.SlowMotionVideo, null) }
                 IconButton(onClick = { vm.toggleFav(p.id) }) { Icon(Icons.Default.Favorite, null) }
-                TextButton(onClick = { vm.grade(p.id, "phrase", SrsGrade.Good) }) { Text("اختبرني لاحقًا") }
+                TextButton(onClick = { vm.grade(p.id, "phrase", SrsGrade.Good, lang, "forward") }) { Text("احفظ أمامي") }
+                TextButton(onClick = { vm.grade(p.id, "phrase", SrsGrade.Good, lang, "reverse") }) { Text("احفظ عكسي") }
             }
         }
     }
@@ -342,7 +460,11 @@ fun ReviewScreen(vm: AcademyViewModel) {
         Text(w?.arabic ?: p?.arabic ?: "")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             listOf(SrsGrade.Again to "Again", SrsGrade.Hard to "Hard", SrsGrade.Good to "Good", SrsGrade.Easy to "Easy").forEach { (g, l) ->
-                Button(onClick = { vm.grade(card.itemId, card.kind, g); i++ }) { Text(l) }
+                Button(onClick = {
+                    val cardLang = if (card.languageCode == "tr") TargetLang.TR else vm.activeLang()
+                    vm.grade(card.itemId, card.kind, g, cardLang, card.direction)
+                    i++
+                }) { Text(l) }
             }
         }
     }
@@ -378,12 +500,15 @@ fun MoreScreen(vm: AcademyViewModel, nav: NavHostController) {
             "قاموس" to "dict",
             "ثقافة" to "culture",
             "تمثيل أدوار" to "role",
+            "تدريب تفاعلي كامل" to "trainers",
             "قارن اللغتين" to "compare",
             "قصص" to "stories",
             "مدرب الأفعال" to "verbs",
             "المكتبة المرجعية" to "library",
             "تحديد مستوى" to "placement",
+            "خطة 30 يومًا" to "plan",
             "حروف تركية" to "letters",
+            "أخطائي" to "mistakes",
             "تقدمي" to "progress",
             "إعدادات" to "settings",
         ).forEach { (t, r) ->
@@ -396,6 +521,50 @@ fun MoreScreen(vm: AcademyViewModel, nav: NavHostController) {
 @Composable
 fun DictScreen(vm: AcademyViewModel) {
     VocabScreen(vm)
+}
+
+@Composable
+fun MistakesScreen(vm: AcademyViewModel, nav: NavHostController) {
+    val weak = vm.weakMap()
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("أخطائي", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text("هذه ليست عقوبة؛ إنها قائمة بما يستحق جلسة إضافية.", modifier = Modifier.padding(vertical = 6.dp))
+        if (weak.isEmpty()) {
+            Text("لا توجد أخطاء مسجلة بعد. جرّب التدريب أو القصص أو الكتابة.")
+        } else {
+            weak.entries.sortedByDescending { it.value }.forEach { (skill, count) ->
+                Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    ListItem(
+                        headlineContent = { Text(skillLabel(skill)) },
+                        supportingContent = { Text("محاولات تحتاج مراجعة: $count") },
+                        trailingContent = { TextButton(onClick = { nav.navigate(skillRoute(skill)) }) { Text("تدرّب") } }
+                    )
+                }
+            }
+            OutlinedButton(onClick = { vm.clearWeak() }, modifier = Modifier.padding(top = 8.dp)) { Text("مسح سجل نقاط الضعف") }
+        }
+        Text("نصيحة: أعد نفس الموقف بعد مراجعة النموذج، ولا تنتقل إلى محتوى جديد إذا تراكمت الأخطاء.", modifier = Modifier.padding(top = 14.dp))
+    }
+}
+
+private fun skillLabel(skill: String) = when (skill) {
+    "reading" -> "📖 القراءة وفهم القصص"
+    "listening" -> "🎧 الاستماع"
+    "writing" -> "✍️ الكتابة"
+    "grammar" -> "🧩 القواعد"
+    "speaking" -> "🎭 التحدث والتدريب"
+    "vocab" -> "📚 المفردات"
+    else -> skill
+}
+
+private fun skillRoute(skill: String) = when (skill) {
+    "reading" -> "stories"
+    "listening" -> "shadow"
+    "writing" -> "learn"
+    "grammar" -> "grammar"
+    "speaking" -> "trainers"
+    "vocab" -> "vocab"
+    else -> "review"
 }
 
 @Composable
@@ -482,14 +651,26 @@ fun RoleScreen(vm: AcademyViewModel) {
 @Composable
 fun CompareScreen(vm: AcademyViewModel) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("قارن اللغات — مفيد لوضع الازدواج", fontWeight = FontWeight.Bold)
-        vm.phrases.take(8).forEach { p ->
+        Text("قارن اللغات", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text("30 تحليلًا يشرح الفرق بين الترجمة الحرفية وما يقوله البائع فعلًا.", modifier = Modifier.padding(vertical = 6.dp))
+        vm.analyses.forEach { a ->
             Card(Modifier.padding(vertical = 6.dp).fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
-                    Text("ع: ${p.arabic}")
-                    Text("🇮🇩 ${p.idText}", style = TextStyle(textDirection = TextDirection.Ltr))
-                    Text("🇹🇷 ${p.trText}", style = TextStyle(textDirection = TextDirection.Ltr))
-                    Text("ملاحظة ترتيب الكلمات: الإندونيسية SVO بلا تصريف؛ التركية SOV بلواحق.")
+                    Text("عربي: ${a.arabic}", fontWeight = FontWeight.Bold)
+                    Text("🇮🇩 ${a.idText}", style = TextStyle(textDirection = TextDirection.Ltr, fontSize = 18.sp))
+                    Text("حرفيًا: ${a.idLiteral}")
+                    Text("النطق: ${a.idSound}")
+                    Text("متى: ${a.idWhen}")
+                    Text("طبيعية: ${a.idNatural}")
+                    if (a.idBetter.isNotBlank()) Text("البديل الأفضل: ${a.idBetter}")
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    Text("🇹🇷 ${a.trText}", style = TextStyle(textDirection = TextDirection.Ltr, fontSize = 18.sp))
+                    Text("حرفيًا: ${a.trLiteral}")
+                    Text("النطق: ${a.trSound}")
+                    Text("متى: ${a.trWhen}")
+                    Text("طبيعية: ${a.trNatural}")
+                    if (a.trBetter.isNotBlank()) Text("البديل الأفضل: ${a.trBetter}")
+                    if (a.expertNote.isNotBlank()) Text("ملاحظة الخبير: ${a.expertNote}", modifier = Modifier.padding(top = 8.dp))
                 }
             }
         }
@@ -519,13 +700,38 @@ fun QuizScreen(vm: AcademyViewModel) {
 
 @Composable
 fun StoriesScreen(vm: AcademyViewModel) {
+    val snap by vm.snapshot.collectAsState()
     val lang = vm.activeLang()
+    val answered = remember { mutableStateMapOf<String, Int>() }
     Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("قصص متدرجة", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text("اقرأ، استمع، ثم اختبر فهمك. القصص محفوظة داخل التطبيق.", modifier = Modifier.padding(vertical = 6.dp))
         vm.stories.filter { it.lang == lang }.forEach { st ->
-            Text(st.title, fontWeight = FontWeight.Bold)
-            Text(st.text, style = TextStyle(textDirection = TextDirection.Ltr))
-            Text(st.arabic)
-            IconButton(onClick = { vm.speak(st.text, lang, false) }) { Icon(Icons.Default.VolumeUp, null) }
+            Card(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("${st.level} · ${st.title}", fontWeight = FontWeight.Bold)
+                    Text(st.text, style = TextStyle(textDirection = TextDirection.Ltr), modifier = Modifier.padding(vertical = 6.dp))
+                    if (!snap.hideArabic) Text(st.arabic)
+                    Row {
+                        IconButton(onClick = { vm.speak(st.text, lang, false) }) { Icon(Icons.Default.VolumeUp, "استماع") }
+                        IconButton(onClick = { vm.speak(st.text, lang, true) }) { Icon(Icons.Default.SlowMotionVideo, "بطيء") }
+                    }
+                    st.questions.forEach { q ->
+                        Text(q.prompt, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                        q.options.forEachIndexed { index, option ->
+                            val result = answered[q.id]
+                            OutlinedButton(
+                                onClick = {
+                                    answered[q.id] = index
+                                    if (index != q.answerIndex) vm.markWeak("reading")
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                            ) { Text(if (result == index && index == q.answerIndex) "✅ $option" else if (result == index) "❌ $option" else option) }
+                        }
+                        answered[q.id]?.let { result -> Text(if (result == q.answerIndex) "إجابة صحيحة ✅ ${q.explain}" else "راجع القصة: ${q.explain}") }
+                    }
+                }
+            }
         }
     }
 }
@@ -586,6 +792,36 @@ fun ForgotInbox(vm: AcademyViewModel) {
 @Composable
 fun Placement(vm: AcademyViewModel) {
     Onboard(vm)
+}
+
+@Composable
+fun NativePlanScreen(vm: AcademyViewModel, nav: NavHostController) {
+    val days = listOf(
+        "النطق والتحيات", "عبارات النجاة", "أهم الكلمات", "التعريف بالنفس", "الأرقام والأسعار",
+        "مراجعة الأسبوع الأول", "حوار الجيران", "أدوات الأسئلة", "الأفعال الأساسية", "بطاقات المستوى",
+        "حوار المطعم", "الوقت والأيام", "الاتجاهات", "اختبار الأسبوع الثاني", "جذب انتباه الزبون",
+        "الترحيب", "المخاطبة", "عرض المنتج", "معرفة احتياج الزبون", "قول السعر",
+        "حوار محل الملابس", "المساومة", "تمثيل المساومة", "الرفض بأدب", "الشكاوى",
+        "الإقناع دون ضغط", "واتساب", "تدريب شامل", "مراجعة الأخطاء", "جولة ختامية"
+    )
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("خطة 30 يومًا", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text("20–30 دقيقة يوميًا. راجع البطاقات المستحقة قبل درس جديد.", modifier = Modifier.padding(vertical = 6.dp))
+        days.forEachIndexed { index, title ->
+            Card(Modifier.fillMaxWidth().padding(vertical = 3.dp).clickable {
+                when {
+                    index == 0 -> nav.navigate("letters")
+                    index in 1..4 -> nav.navigate("travel")
+                    index == 6 || index == 10 || index == 20 -> nav.navigate("dialogues")
+                    index in 14..26 -> nav.navigate("sales")
+                    index == 27 -> nav.navigate("trainers")
+                    else -> nav.navigate("review")
+                }
+            }) {
+                ListItem(headlineContent = { Text("اليوم ${index + 1}: $title") }, supportingContent = { Text("جلسة Native أوفلاين") })
+            }
+        }
+    }
 }
 
 @Composable

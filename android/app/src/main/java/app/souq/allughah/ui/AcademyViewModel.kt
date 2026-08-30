@@ -7,8 +7,6 @@ import app.souq.allughah.audio.TtsPlayer
 import app.souq.allughah.data.SeedContent
 import app.souq.allughah.data.UserStore
 import app.souq.allughah.domain.*
-import app.souq.allughah.domain.Sm2Scheduler
-import app.souq.allughah.domain.Sm2State
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -28,6 +26,19 @@ class AcademyViewModel(app: Application) : AndroidViewModel(app) {
     val quizzes get() = SeedContent.quizzes
     val stories get() = SeedContent.stories
     val verbs get() = SeedContent.verbs
+    val analyses get() = FullAnalyses.all
+    val nativeTrainers get() = FullTrainers.all
+    val nativeChapters: List<NativeChapter> by lazy {
+        phrases.groupBy { it.topic }.mapIndexed { index, (topic, items) ->
+            val parts = topic.split("|", limit = 2)
+            NativeChapter(
+                id = "native-$index",
+                title = parts.last().ifBlank { "عبارات متنوعة" },
+                group = parts.firstOrNull().orEmpty(),
+                phrases = items
+            )
+        }
+    }
 
     fun filteredWords(lang: TargetLang) = words.filter { it.lang == lang }
     fun filteredLessons(lang: TargetLang) = lessons.filter { it.lang == lang }
@@ -55,29 +66,35 @@ class AcademyViewModel(app: Application) : AndroidViewModel(app) {
         val map = mutableMapOf<String, ReviewCard>()
         snapshot.value.srsRaw.split(";").filter { it.isNotBlank() }.forEach { row ->
             val p = row.split("|")
-            if (p.size >= 6) {
-                map[p[0]] = ReviewCard(p[0], p[1], p[2].toInt(), p[3].toLong(), p[4].toInt(), p[5].toInt())
+            if (p.size >= 6) runCatching {
+                val card = ReviewCard(
+                    itemId = p[0], kind = p[1], box = p[2].toInt().coerceIn(0, 5),
+                    dueAt = p[3].toLong(), lapses = p[4].toInt().coerceAtLeast(0), reps = p[5].toInt().coerceAtLeast(0),
+                    languageCode = p.getOrNull(6).orEmpty(), direction = p.getOrNull(7) ?: "forward"
+                )
+                map[srsKey(card.itemId, card.kind, card.languageCode, card.direction)] = card
             }
         }
         return map
     }
 
+    private fun srsKey(id: String, kind: String, language: String, direction: String) =
+        listOf(id, kind, language.ifBlank { "legacy" }, direction).joinToString("~")
+
     private fun saveSrs(map: Map<String, ReviewCard>) {
         val raw = map.values.joinToString(";") {
-            "${it.itemId}|${it.kind}|${it.box}|${it.dueAt}|${it.lapses}|${it.reps}"
+            "${it.itemId}|${it.kind}|${it.box}|${it.dueAt}|${it.lapses}|${it.reps}|${it.languageCode}|${it.direction}"
         }
         viewModelScope.launch { store.setSrs(raw) }
     }
 
-    fun grade(id: String, kind: String, g: SrsGrade) {
+    fun grade(id: String, kind: String, g: SrsGrade, language: TargetLang = activeLang(), direction: String = "forward") {
         val now = System.currentTimeMillis()
         val map = parseSrs()
-        val cur = map[id] ?: ReviewCard(id, kind, 0, now, 0, 0)
-        val sm = Sm2Scheduler.schedule(
-            Sm2State(id, kind, snapshot.value.activeLang, cur.reps, cur.box, 2.5, cur.dueAt, cur.lapses, cur.reps, (cur.reps - cur.lapses).coerceAtLeast(0)),
-            g, now
-        )
-        map[id] = ReviewCard(id, kind, sm.intervalDays.coerceAtMost(5), sm.dueAt, sm.lapses, sm.repetitions)
+        val key = srsKey(id, kind, language.code, direction)
+        val cur = map[key] ?: ReviewCard(id, kind, 0, now, 0, 0, language.code, direction)
+        // مصدر الحقيقة في APK هو Leitner Native: box يبقى حالة 0..5.
+        map[key] = LearningEngine.applyGrade(cur, g, now)
         saveSrs(map)
         viewModelScope.launch {
             store.addXp(snapshot.value.activeLang, if (g == SrsGrade.Again) 1 else 4)
@@ -93,6 +110,8 @@ class AcademyViewModel(app: Application) : AndroidViewModel(app) {
             store.setWeak(raw + skill + ",")
         }
     }
+
+    fun clearWeak() = viewModelScope.launch { store.setWeak("") }
 
     fun weakMap(): Map<String, Int> =
         snapshot.value.weakRaw.split(",").filter { it.isNotBlank() }.groupingBy { it }.eachCount()
