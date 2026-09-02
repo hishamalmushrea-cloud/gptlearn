@@ -56,7 +56,7 @@ object LearningEngine {
     }
 
     fun fiveMinutePlan(lang: TargetLang): List<String> = listOf(
-        "3 كلمات عالية التواتر ($lang)",
+        "3 كلمات عالية التواتر (${lang.arName})",
         "عبارتان جاهزتان",
         "سؤال استماع واحد",
         "مراجعة بطاقة مستحقة",

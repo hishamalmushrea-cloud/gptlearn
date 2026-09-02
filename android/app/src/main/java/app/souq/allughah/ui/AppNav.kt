@@ -105,20 +105,20 @@ fun Onboard(vm: AcademyViewModel) {
     var step by remember { mutableIntStateOf(0) }
     var scoreId by remember { mutableIntStateOf(0) }
     var scoreTr by remember { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(24.dp).verticalScroll(rememberScrollState())) {
         Text("سوق اللغة", fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Text("أكاديمية أوفلاين للإندونيسية والتركية — للمتحدث العربي")
         Spacer(Modifier.height(16.dp))
         when (step) {
             0 -> {
                 Text("مرحبًا. تتعلّم لغة حقيقية للسوق والسفر والعمل، لا ترجمة حرفية.")
-                Button(onClick = { step = 1 }) { Text("ابدأ") }
+                Button(onClick = { step = 1 }, modifier = Modifier.fillMaxWidth()) { Text("ابدأ") }
             }
             1 -> {
                 Text("ماذا تريد أن تتعلم؟")
-                Button(onClick = { vm.setMode("id"); vm.setActive(TargetLang.ID); step = 2 }) { Text("🇮🇩 الإندونيسية") }
-                Button(onClick = { vm.setMode("tr"); vm.setActive(TargetLang.TR); step = 2 }) { Text("🇹🇷 التركية") }
-                Button(onClick = { vm.setMode("both"); step = 2 }) { Text("الاثنتان معًا") }
+                Button(onClick = { vm.setMode("id"); vm.setActive(TargetLang.ID); step = 2 }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Text("🇮🇩 الإندونيسية") }
+                Button(onClick = { vm.setMode("tr"); vm.setActive(TargetLang.TR); step = 2 }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Text("🇹🇷 التركية") }
+                Button(onClick = { vm.setMode("both"); step = 2 }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Text("الاثنتان معًا") }
             }
             2 -> {
                 Text("اختبار استرشادي قصير (ليس شهادة رسمية)")
@@ -133,8 +133,8 @@ fun Onboard(vm: AcademyViewModel) {
                 val id = if (scoreId > 0) "A1" else "A0"
                 val tr = if (scoreTr > 0) "A1" else "A0"
                 Text("نتيجتك الاسترشادية: إندونيسية $id — تركية $tr")
-                Button(onClick = { vm.setCefr(TargetLang.ID, id); vm.setCefr(TargetLang.TR, tr); vm.finishOnboard() }) { Text("ابدأ من هذا المستوى") }
-                OutlinedButton(onClick = { vm.setCefr(TargetLang.ID, "A0"); vm.setCefr(TargetLang.TR, "A0"); vm.finishOnboard() }) { Text("أبدأ من الصفر رغم ذلك") }
+                Button(onClick = { vm.setCefr(TargetLang.ID, id); vm.setCefr(TargetLang.TR, tr); vm.finishOnboard() }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Text("ابدأ من هذا المستوى") }
+                OutlinedButton(onClick = { vm.setCefr(TargetLang.ID, "A0"); vm.setCefr(TargetLang.TR, "A0"); vm.finishOnboard() }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Text("أبدأ من الصفر رغم ذلك") }
             }
         }
     }
@@ -161,7 +161,11 @@ fun Home(vm: AcademyViewModel, nav: NavHostController) {
             Column(Modifier.padding(16.dp)) {
                 Text("تابع من حيث توقفت", fontWeight = FontWeight.Bold)
                 Text(s.resume.ifBlank { "ابدأ درس اليوم" })
-                Button(onClick = { nav.navigate("learn"); vm.resume("learn") }) { Text("ابدأ درس اليوم") }
+                Button(onClick = {
+                    val knownRoutes = setOf("learn", "review", "vocab", "grammar", "dialogues", "travel", "sales", "chat", "dict", "culture", "role", "trainers", "compare", "quiz", "stories", "verbs", "skills", "five", "forgot", "plan", "library", "progress", "mistakes", "settings")
+                    val target = if (s.resume in knownRoutes) s.resume else "learn"
+                    nav.navigate(target)
+                }) { Text(if (s.resume.isBlank()) "ابدأ درس اليوم" else "تابع: يفتح مكان توقفك الأخير") }
             }
         }
         Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -325,9 +329,9 @@ fun VocabScreen(vm: AcademyViewModel) {
                     Text("نطق: ${w.phoneticAr} · ${w.pos} · ${w.level} · #${w.frequencyRank}")
                     Text("${w.example} — ${w.exampleAr}")
                     Row {
-                        IconButton(onClick = { vm.speak(w.lemma, lang, false) }) { Icon(Icons.Default.VolumeUp, null) }
-                        IconButton(onClick = { vm.speak(w.lemma, lang, true) }) { Icon(Icons.Default.SlowMotionVideo, null) }
-                        IconButton(onClick = { vm.toggleFav(w.id) }) { Icon(if (s.favs.contains(w.id)) Icons.Default.Star else Icons.Default.StarBorder, null) }
+                        IconButton(onClick = { vm.speak(w.lemma, lang, false) }) { Icon(Icons.Default.VolumeUp, "استماع") }
+                        IconButton(onClick = { vm.speak(w.lemma, lang, true) }) { Icon(Icons.Default.SlowMotionVideo, "استماع بطيء") }
+                        IconButton(onClick = { vm.toggleFav(w.id) }) { Icon(if (s.favs.contains(w.id)) Icons.Default.Star else Icons.Default.StarBorder, if (s.favs.contains(w.id)) "في المفضلة — اضغط للإزالة" else "إضافة إلى المفضلة") }
                         TextButton(onClick = { vm.grade(w.id, "vocab", SrsGrade.Good, lang, "forward") }) { Text("أعرفها") }
                     }
                 }
@@ -381,11 +385,13 @@ fun PhraseCard(p: Phrase, vm: AcademyViewModel, hideAr: Boolean, lang: TargetLan
             Text("لماذا طبيعية: ${p.whyNatural}")
             if (p.literal.isNotBlank()) Text("حرفيًا (للتعليم فقط): ${p.literal}")
             if (p.cultural.isNotBlank()) Text("ثقافة: ${p.cultural}")
+            val txt = if (lang == TargetLang.TR) p.trText else p.idText
             Row {
-                val txt = if (lang == TargetLang.TR) p.trText else p.idText
-                IconButton(onClick = { vm.speak(txt, lang, false) }) { Icon(Icons.Default.VolumeUp, null) }
-                IconButton(onClick = { vm.speak(txt, lang, true) }) { Icon(Icons.Default.SlowMotionVideo, null) }
-                IconButton(onClick = { vm.toggleFav(p.id) }) { Icon(Icons.Default.Favorite, null) }
+                IconButton(onClick = { vm.speak(txt, lang, false) }) { Icon(Icons.Default.VolumeUp, "استماع") }
+                IconButton(onClick = { vm.speak(txt, lang, true) }) { Icon(Icons.Default.SlowMotionVideo, "استماع بطيء") }
+                IconButton(onClick = { vm.toggleFav(p.id) }) { Icon(Icons.Default.Favorite, "حفظ العبارة في المفضلة") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { vm.grade(p.id, "phrase", SrsGrade.Good, lang, "forward") }) { Text("احفظ أمامي") }
                 TextButton(onClick = { vm.grade(p.id, "phrase", SrsGrade.Good, lang, "reverse") }) { Text("احفظ عكسي") }
             }
@@ -429,8 +435,8 @@ fun DialogueScreen(vm: AcademyViewModel) {
                         if (!s.hideArabic) Text(t.arabic)
                         if (!hideText) Text(body, style = TextStyle(textDirection = TextDirection.Ltr))
                         Row {
-                            IconButton(onClick = { vm.speak(body, lang, false) }) { Icon(Icons.Default.PlayArrow, null) }
-                            IconButton(onClick = { vm.speak(body, lang, true) }) { Icon(Icons.Default.SlowMotionVideo, null) }
+                            IconButton(onClick = { vm.speak(body, lang, false) }) { Icon(Icons.Default.PlayArrow, "تشغيل الحوار") }
+                            IconButton(onClick = { vm.speak(body, lang, true) }) { Icon(Icons.Default.SlowMotionVideo, "استماع بطيء") }
                         }
                     }
                 }
@@ -459,7 +465,7 @@ fun ReviewScreen(vm: AcademyViewModel) {
         Text(w?.lemma ?: p?.idText ?: card.itemId, fontSize = 28.sp, style = TextStyle(textDirection = TextDirection.Ltr))
         Text(w?.arabic ?: p?.arabic ?: "")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            listOf(SrsGrade.Again to "Again", SrsGrade.Hard to "Hard", SrsGrade.Good to "Good", SrsGrade.Easy to "Easy").forEach { (g, l) ->
+            listOf(SrsGrade.Again to "نسيتها", SrsGrade.Hard to "بصعوبة", SrsGrade.Good to "أعرفها", SrsGrade.Easy to "سهلة").forEach { (g, l) ->
                 Button(onClick = {
                     val cardLang = if (card.languageCode == "tr") TargetLang.TR else vm.activeLang()
                     vm.grade(card.itemId, card.kind, g, cardLang, card.direction)
@@ -684,7 +690,9 @@ fun QuizScreen(vm: AcademyViewModel) {
     val q = vm.quizzes.getOrNull(i)
     Column(Modifier.padding(16.dp)) {
         if (q == null) {
-            Text("انتهى. النتيجة $score / ${vm.quizzes.size}")
+            Text("انتهى. النتيجة $score / ${vm.quizzes.size}", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text(if (score * 2 >= vm.quizzes.size) "أداء طيب — راجع أخطاءك في شاشة أخطائي ثم أعد المحاولة." else "لا بأس — كل خطأ سُجّل في «أخطائي» لتعيد التدريب عليه.", modifier = Modifier.padding(vertical = 8.dp))
+            Button(onClick = { i = 0; score = 0 }, modifier = Modifier.fillMaxWidth()) { Text("أعد الاختبار من البداية") }
             return
         }
         Text(q.prompt, fontWeight = FontWeight.Bold)
@@ -769,7 +777,7 @@ fun FiveMin(vm: AcademyViewModel) {
         LearningEngine.fiveMinutePlan(vm.activeLang()).forEach { Text("• $it") }
         vm.filteredWords(vm.activeLang()).take(3).forEach {
             Text("${it.lemma} — ${it.arabic}")
-            IconButton(onClick = { vm.speak(it.lemma, it.lang, false) }) { Icon(Icons.Default.VolumeUp, null) }
+            IconButton(onClick = { vm.speak(it.lemma, it.lang, false) }) { Icon(Icons.Default.VolumeUp, "استماع") }
         }
     }
 }
