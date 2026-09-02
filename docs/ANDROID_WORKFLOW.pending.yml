@@ -1,0 +1,88 @@
+# ========================================================================
+# ⚠️ هذا ملف مرجعي — ليس workflow فعّالًا.
+# انسَخ محتواه (من السطر "name:" فما بعده) والصقه كاملًا مكان:
+#   .github/workflows/android.yml   (عدّله يدويًا من واجهة GitHub)
+# السبب: صلاحية تطبيق Arena لا تسمح بتعديل ملفات .github/workflows عبر Git.
+# ========================================================================
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'android/**'
+      - 'data/**'          # مصدر المحتوى الذي يولّد FullContent.kt
+      - 'tools/**'         # المولّد نفسه
+      - 'index.html'       # ترتيب تحميل ملفات البيانات يغذّي المولّد
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node (فحوص المحتوى والمولّد)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: فحص سلامة بيانات المحتوى
+        run: node validate.mjs
+
+      - name: اختبارات محرك التعلم (JS)
+        run: node test/engine.test.mjs
+
+      - name: التحقق من تزامن محتوى أندرويد مع data/**
+        run: node tools/gen_android_content.mjs --check
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK (تثبيت/ترخيص إن لزم)
+        uses: android-actions/setup-android@v3
+
+      - name: قبول تراخيص Android SDK صراحة
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platforms;android-34" > /dev/null 2>&1 || true
+
+      - name: Install Gradle manually (bypass broken Actions cache service)
+        run: |
+          curl -sL -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q /tmp/gradle.zip -d "$HOME/tools"
+          echo "$HOME/tools/gradle-8.7/bin" >> "$GITHUB_PATH"
+
+      - name: اختبارات وحدات Kotlin (SM-2/التقييم/المدرب)
+        run: gradle -p android testDebugUnitTest --no-daemon --stacktrace
+
+      # تطبيق Native — لا تُنسخ ملفات الويب إلى الأصول (لا WebView).
+      - name: Build debug APK (offline app — no internet permission)
+        run: gradle -p android assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: souq-allughah-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Publish APK as GitHub Release (تحميل مباشر)
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK=$(ls android/app/build/outputs/apk/debug/*.apk)
+          TAG="apk-v${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" "$APK#تطبيق سوق اللغة — ثبّته مباشرة" \
+            --title "سوق اللغة — APK (بناء #$GITHUB_RUN_NUMBER)" \
+            --target "$GITHUB_SHA" \
+            --notes "أكاديمية الإندونيسية والتركية كاملة (1000 جملة ثنائية، 33 موقفًا، 52 موضوعًا) — تطبيق أندرويد Native أوفلاين 100% وبلا صلاحية إنترنت. فعّل «مصادر غير معروفة» وثبّت." \
+            2>/dev/null || gh release upload "$TAG" "$APK" --clobber
