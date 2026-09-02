@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.souq.allughah.audio.TtsPlayer
+import app.souq.allughah.data.FullAnalyses
+import app.souq.allughah.data.FullTrainers
 import app.souq.allughah.data.SeedContent
 import app.souq.allughah.data.UserStore
 import app.souq.allughah.domain.*
@@ -29,13 +31,14 @@ class AcademyViewModel(app: Application) : AndroidViewModel(app) {
     val analyses get() = FullAnalyses.all
     val nativeTrainers get() = FullTrainers.all
     val nativeChapters: List<NativeChapter> by lazy {
-        phrases.groupBy { it.topic }.mapIndexed { index, (topic, items) ->
-            val parts = topic.split("|", limit = 2)
+        // groupBy تعيد Map — لذا نمر على entries (لا mapIndexed على Map مباشرة)
+        phrases.groupBy { it.topic }.entries.mapIndexed { index, entry ->
+            val parts = entry.key.split("|", limit = 2)
             NativeChapter(
                 id = "native-$index",
                 title = parts.last().ifBlank { "عبارات متنوعة" },
                 group = parts.firstOrNull().orEmpty(),
-                phrases = items
+                phrases = entry.value
             )
         }
     }
