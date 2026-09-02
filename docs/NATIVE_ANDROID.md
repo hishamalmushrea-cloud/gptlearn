@@ -1,14 +1,14 @@
-# الأندرويد — التطبيق الأصلي
+# الأندرويد — التطبيق الأصلي (المنتج الوحيد)
 
-المسار المعتمد: **Android Native + Jetpack Compose**.
+المسار المعتمد نهائيًا: **Android Native + Jetpack Compose**.
 
-- `MainActivity` يفتح `AcademyRoot` مباشرة، بلا WebView.
-- المحتوى الذي يستخدمه APK موجود في `SeedContent.kt` ونماذج Kotlin الأصلية.
-- التقدم محلي عبر DataStore، والمراجعة عبر محرك SRS Native.
-- النطق عبر Android TextToSpeech.
-- المكتبة المرجعية Markdown داخل `app/src/main/assets/library` وتُقرأ Native.
-- لا تُنسخ ملفات `index.html` أو `js/` أو `data/` أو `css/` إلى APK.
+- `MainActivity` يفتح `AcademyRoot` مباشرة، بلا WebView، وبلا صلاحية إنترنت.
+- بنك العبارات الثنائي (1000 عبارة) في `data/FullContent.kt` **مولَّد آليًا** من `data/**` عبر `tools/gen_android_content.mjs` — لا يُعدَّل يدويًا، وCI يفشل البناء إن خرج عن التزامن (`--check`).
+- بقية المحتوى (قاموس 160، حوارات 33، قواعد 29، قصص 8، أفعال 16، تحليلات 30، مدربون 8) نُقل كاملًا إلى Kotlin ويُحرَّر هناك مباشرة.
+- التقدم محلي عبر DataStore، والمراجعة عبر محركي SRS Native (Leitner + SM‑2) في `domain/` باختبارات JUnit.
+- النطق عبر Android TextToSpeech، والمكتبة المرجعية Markdown في `app/src/main/assets/library` تُقرأ Native.
+- لا تُنسخ ملفات `index.html` أو `js/` أو `css/` إلى APK — ويب الجذر معاينة تأليف فقط.
 
-ملفات PWA في جذر المستودع تاريخية وخارج مسار بناء Android. المرحلة التالية هي نقل المحتوى الكامل إليها تدريجيًا بصيغة Native منظمة وقابلة للتحقق، مع الحفاظ على المعرفات والتقدم.
+دورة تعديل عبارة: عدّل `data/**` ← `node validate.mjs` ← `node tools/gen_android_content.mjs` ← ارفع الملفين معًا.
 
 ما لا ندّعيه: تعرّف الكلام على الجهاز، شهادات رسمية، أو تسجيلات بشرية كاملة.

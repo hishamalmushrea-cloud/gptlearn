@@ -36,6 +36,8 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
+    // اختبارات وحدات JVM لمنطق المجال النقي (domain/*.kt) — بلا اعتماديات أندرويد
+    testImplementation("junit:junit:4.13.2")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")

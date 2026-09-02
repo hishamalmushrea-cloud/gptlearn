@@ -1,4 +1,8 @@
-# ARCHITECTURE — البنية (ويب PWA)
+# ARCHITECTURE — البنية
+
+**المنتج:** تطبيق أندرويد Native (Compose) في `android/` — مجال نقي في `domain/` (Leitner/SM‑2/تقييم/بحث) باختبارات JUnit، حالة المستخدم في DataStore بمعرفات ثابتة، ومحتوى العبارات يتولّد آليًا في `data/FullContent.kt` من `data/**` عبر `tools/gen_android_content.mjs` (لا تُعدَّل يدويًا — CI يفرض التزامن). مكتبة Markdown المرجعية في `android/app/src/main/assets/library/` تُقرأ Native.
+
+**استوديو المحتوى (معاينة داخلية فقط):** ويب PWA في الجذر، بلا دور في المنتج النهائي:
 
 ```
 index.html          الهيكل + تحميل البيانات (data قبل المنطق)
@@ -23,4 +27,4 @@ data/**             المحتوى (فصول/حوارات/قصص/ثقافة/تح
 `sw.js` كاش مسبق كامل + network-first بfallback كاش؛ `manifest.json` تثبيت standalone؛ لا طلبات شبكة في أي وظيفة تعلم.
 
 ## الاختبارات
-`validate.mjs` (سلامة بيانات) + جن jsdom خارجي يغطي كل المسارات والتدفقات.
+`validate.mjs` (سلامة بيانات) + `test/engine.test.mjs` (وحدات المحرك JS) + `tools/gen_android_content.mjs --check` (تزامن المحتوى Native) + `android/app/src/test` (وحدات Kotlin للمجال) — وتجميعها إلزامي في CI قبل بناء APK. لا يوجد حاليًا اختبار شامل لواجهة المعاينة.
